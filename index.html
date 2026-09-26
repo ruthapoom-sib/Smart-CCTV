@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>กล้องจราจรฉะเชิงเทรา</title>
+<meta name="description" content="ภาพสดกล้อง CCTV จราจร 40 จุด ในเขตเทศบาลเมืองฉะเชิงเทรา">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='5' width='30' height='22' rx='5' fill='%230A6B47'/%3E%3Crect x='3.5' y='7.5' width='25' height='17' rx='3' fill='none' stroke='%23F6F6F1' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23F6F6F1'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js"></script>
+<style>
+:root {
+  --asphalt: #1F2327;
+  --kerb: #343A40;
+  --sign: #0A6B47;
+  --paint: #F6F6F1;
+  --lane: #F2B705;
+  --stop: #E5484D;
+  --go: #2FBF71;
+  --dim: #9BA4AC;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; }
+body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--asphalt);
+  color: var(--paint);
+  font: 15px/1.5 Anuphan, system-ui, sans-serif;
+}
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 10px 16px; }
+.brand h1 { font-size: 21px; font-weight: 700; line-height: 1.2; }
+.brand p { font-size: 13px; color: var(--dim); }
+.status { display: flex; align-items: center; gap: 16px; margin-right: auto; font-variant-numeric: tabular-nums; }
+.live { display: inline-flex; align-items: center; gap: 8px; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); box-shadow: 0 0 8px var(--go); }
+#clock { color: var(--dim); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+button, select { font: inherit; font-size: 14px; color: inherit; background: var(--kerb); border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+select { max-width: 17em; }
+.seg { display: inline-flex; padding: 2px; background: var(--kerb); border-radius: 6px; }
+.seg button { padding: 4px 10px; background: none; border-radius: 4px; }
+.seg button[aria-pressed="true"] { background: var(--paint); color: var(--asphalt); font-weight: 600; }
+:focus-visible { outline: 2px solid var(--lane); outline-offset: 2px; }
+
+.grid {
+  --n: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 16px;
+}
+.tile { position: relative; overflow: hidden; background: #000; border-radius: 4px; cursor: zoom-in; container-type: inline-size; }
+.tile video { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+/* ป้ายบอกทางสีเขียว มีเส้นขอบขาวด้านใน */
+.sign {
+  position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center;
+  padding: 7px 12px 7px 7px;
+  background: var(--sign); color: var(--paint); border-radius: 7px;
+  box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3.5px var(--paint), 0 2px 10px rgb(0 0 0 / .45);
+}
+.sign .id { grid-row: span 2; padding: 1px 6px; background: var(--paint); color: var(--sign); border-radius: 4px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sign .name, .sign .grp { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.35; }
+.sign .name { font-size: 14px; font-weight: 600; }
+.sign .grp { font-size: 12px; opacity: .85; }
+@container (max-width: 420px) {
+  .sign { left: 6px; bottom: 6px; max-width: calc(100% - 12px); padding: 5px 10px 5px 5px; column-gap: 6px; }
+  .sign .name { font-size: 12.5px; }
+  .sign .grp { font-size: 11px; }
+}
+@container (max-width: 300px) { .sign .grp { display: none; } }
+
+.foot { gap: 16px; font-size: 13px; color: var(--dim); }
+.foot a { color: var(--paint); }
+#page { min-width: 10em; font-variant-numeric: tabular-nums; }
+/* เส้นประแบ่งช่องจราจร: สีเหลืองเติมเต็มเมื่อใกล้เปลี่ยนหน้า */
+.lane { position: relative; flex: 1; min-width: 80px; height: 4px; background: repeating-linear-gradient(90deg, var(--kerb) 0 24px, transparent 24px 36px); }
+.lane i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(90deg, var(--lane) 0 24px, transparent 24px 36px); transition: width .25s linear; }
+
+/* ไฟสัญญาณ: เหลือง = กำลังเชื่อมต่อ, เขียว = live, แดง = ไม่มีสัญญาณ */
+.lamp { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--lane); box-shadow: 0 0 0 3px rgb(0 0 0 / .55); }
+.tile[data-state="connecting"] .lamp { animation: blink 1s ease-in-out infinite; }
+.tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 3px rgb(0 0 0 / .55), 0 0 10px var(--go); }
+.tile[data-state="offline"] .lamp, .tile[data-state="unsupported"] .lamp { background: var(--stop); }
+.tile[data-state="offline"], .tile[data-state="unsupported"] { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
+.msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
+@keyframes blink { 50% { opacity: .2; } }
+
+.grid.has-focus { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.grid.has-focus .tile:not(.focused) { display: none; }
+.tile.focused { cursor: zoom-out; }
+
+@media (max-width: 700px) {
+  body { height: auto; min-height: 100dvh; }
+  .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .tile { aspect-ratio: 16 / 9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+}
+.test { position: fixed; z-index: 9; top: 8px; left: 8px; margin: 0; padding: 12px 16px; background: #000; color: #fff; border: 1px solid #F2B705; font: 13px/1.6 ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <h1>กล้องจราจรฉะเชิงเทรา</h1>
+    <p>ภาพสด 40 จุด ในเขตเทศบาลเมืองฉะเชิงเทรา</p>
+  </div>
+  <div class="status">
+    <span class="live" id="live"><i></i><span>กำลังตรวจสอบสัญญาณ…</span></span>
+    <time id="clock"></time>
+  </div>
+  <div class="controls">
+    <select id="group" aria-label="เลือกทางแยก"></select>
+    <div class="seg" role="group" aria-label="จำนวนจอต่อหน้า">
+      <button type="button" data-n="2">4 จอ</button>
+      <button type="button" data-n="3">9 จอ</button>
+      <button type="button" data-n="4">16 จอ</button>
+    </div>
+    <div class="seg" role="group" aria-label="เปลี่ยนหน้า">
+      <button type="button" id="prev" aria-label="หน้าก่อนหน้า">‹</button>
+      <button type="button" id="auto" aria-pressed="true">วนอัตโนมัติ</button>
+      <button type="button" id="next" aria-label="หน้าถัดไป">›</button>
+    </div>
+    <select id="interval" aria-label="เวลาต่อหน้า">
+      <option value="10">ทุก 10 วินาที</option>
+      <option value="15">ทุก 15 วินาที</option>
+      <option value="30">ทุก 30 วินาที</option>
+      <option value="60">ทุก 1 นาที</option>
+    </select>
+    <button type="button" id="fs">เต็มจอ</button>
+  </div>
+</header>
+<main id="grid" class="grid"></main>
+<footer class="bar foot">
+  <span id="page"></span>
+  <div class="lane" aria-hidden="true"><i id="progress"></i></div>
+  <span>ภาพสดจาก <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener">มูลนิธิศูนย์ข้อมูลจราจรอัจฉริยะไทย (ITIC)</a></span>
+</footer>
+<template id="tile-tpl">
+  <figure class="tile" role="button" tabindex="0" data-state="connecting">
+    <video muted autoplay playsinline></video>
+    <span class="lamp" aria-hidden="true"></span>
+    <p class="msg"></p>
+    <figcaption class="sign"><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
+  </figure>
+</template>
+<script>
+// ── data ── (ที่มา: sites.google.com/view/ccs-cctv หน้า "รวมทุกจุด", 2026-09-27)
+const SRC = id => `https://camerai1.iticfoundation.org/hls/ccs${id}.m3u8`;
+const GROUPS = [
+  ['สามแยกเทพคุณากร – สิริโสธร', [['03', 'มุ่งหน้าชลบุรี'], ['05', 'มุ่งหน้าเมืองฉะเชิงเทรา'], ['06', 'ถ.เทพคุณากร']]],
+  ['สามแยกเทพคุณากร – วัดบางพระ', [['01', 'มุ่งหน้าถนนสิริโสธร'], ['00', 'มุ่งหน้าวัดโสธรฯ'], ['02', 'มุ่งหน้าวัดบางพระ']]],
+  ['วัดโสธรวรารามวรวิหาร – ถ.เทพคุณากร', [['22', 'โค้งหน้าวัดโสธรวรารามฯ'], ['23', 'หน้าวัดโสธรวรารามฯ'], ['24', 'หน้า รร.วัดโสธรวรารามฯ'], ['25', 'ซ.เทพคุณากร 5']]],
+  ['วงเวียนอนุสาวรีย์พระยาศรีสุนทรโวหาร', [['09', 'มุ่งหน้า ถ.ศรีโสธร'], ['08', 'หน้าอนุสาวรีย์'], ['07', 'มุ่งหน้า ถ.เทพคุณากร'], ['12', 'มุ่งหน้า ถ.ศรีโสธรตัดใหม่']]],
+  ['ทางแยก–ทางร่วม ถ.ศรีโสธรตัดใหม่', [['13', 'หน้าบิ๊กซี 2 (มุ่งหน้าวงเวียน)'], ['14', 'หน้าบิ๊กซี 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)'], ['28', 'ถ.ประชาสรรค์'], ['29', 'ศรีโสธรตัดใหม่ 15'], ['26', 'ศรีโสธรตัดใหม่ 18 (มุมที่ 1)'], ['27', 'ศรีโสธรตัดใหม่ 18 (มุมที่ 2)']]],
+  ['สามแยก ถ.พระยาศรีสุนทร – ถ.ศรีโสธรตัดใหม่', [['15', 'มุ่งหน้า ถ.มหาจักรพรรดิ์'], ['16', 'มุ่งหน้าวงเวียน'], ['13', 'หน้าบิ๊กซี 2 (มุ่งหน้าวงเวียน)'], ['14', 'หน้าบิ๊กซี 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)']]],
+  ['สามแยกหน้าเมือง – ศาลากลางจังหวัด', [['30', 'สามแยก ถ.หน้าเมือง'], ['42', 'ศาลากลางจังหวัดฉะเชิงเทรา']]],
+  ['ถ.ศรีโสธรตัดใหม่ – ถ.เอมอรอุทิศ', [['19', 'ถ.เอมอรอุทิศ 1 (จุดที่ 1)'], ['31', 'ถ.เอมอรอุทิศ 1 (จุดที่ 2)'], ['17', 'ถ.เอมอรอุทิศ 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)'], ['18', 'ถ.เอมอรอุทิศ 2 (มุ่งหน้าวงเวียน)'], ['34', 'ศรีโสธรตัดใหม่ 4/1 (มุมที่ 1)'], ['35', 'ศรีโสธรตัดใหม่ 4/1 (มุมที่ 2)'], ['32', 'ศรีโสธรตัดใหม่ 5 (มุมที่ 1)'], ['33', 'ศรีโสธรตัดใหม่ 5 (มุมที่ 2)']]],
+  ['สามแยกศรีโสธรตัดใหม่ – มหาจักรพรรดิ์', [['20', 'มุ่งหน้ากรุงเทพฯ'], ['21', 'มุ่งหน้าเข้าเมืองฉะเชิงเทรา'], ['36', 'กลางทางแยก (1)'], ['37', 'กลางทางแยก (2)']]],
+  ['เทศบาลเมืองฯ – มหาจักรพรรดิ์', [['38', 'สามแยกเทศบาล (1)'], ['39', 'สามแยกเทศบาล (2)'], ['40', 'หน้า รร.เทพประสิทธิ์วิทยา (1)'], ['41', 'หน้า รร.เทพประสิทธิ์วิทยา (2)']]],
+];
+const CAMS = GROUPS.flatMap(([group, cams], g) => cams.map(([id, name]) => ({ id, name, group, g })));
+
+// ── logic ──
+const chunk = (list, size) => {
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+};
+const wrap = (i, len) => ((i % len) + len) % len;
+const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
+const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
+
+// ── player ──
+const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
+
+function play(tile, cam) {
+  const video = tile.querySelector('video');
+  let hls = null, fails = 0, timer;
+  video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
+  const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
+  const stop = () => {
+    clearTimeout(timer);
+    hls?.destroy();
+    hls = null;
+    video.onerror = null;
+    video.removeAttribute('src');
+    video.load();
+  };
+  const retry = ms => { stop(); timer = setTimeout(start, ms); };
+  const offline = () => { set('offline'); retry(30_000); };
+
+  function start() {
+    set('connecting');
+    if (window.Hls?.isSupported()) {
+      let recovered = false;
+      hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_, d) => {
+        if (!d.fatal) return;
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) { recovered = true; hls.recoverMediaError(); }
+        else if (d.type === Hls.ErrorTypes.NETWORK_ERROR && ++fails < 3) retry(3000);
+        else offline();
+      });
+      hls.loadSource(SRC(cam.id));
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // iOS Safari
+      video.onerror = offline;
+      video.src = SRC(cam.id);
+    } else {
+      set('unsupported');
+    }
+  }
+
+  video.onplaying = () => { fails = 0; set('live'); };
+  start();
+  return stop;
+}
+
+// ── ui ──
+const $ = id => document.getElementById(id);
+const grid = $('grid'), tpl = $('tile-tpl');
+const INTERVALS = [10, 15, 30, 60];
+const saved = (() => { try { return JSON.parse(localStorage.getItem('cctv')) || {}; } catch { return {}; } })();
+const state = {
+  n: [2, 3, 4].includes(saved.n) ? saved.n : 3,
+  interval: INTERVALS.includes(saved.interval) ? saved.interval : 15,
+  auto: saved.auto !== false,
+  g: Number.isInteger(saved.g) && saved.g >= -1 && saved.g < GROUPS.length ? saved.g : -1,
+  page: 0,
+};
+const save = () => localStorage.setItem('cctv', JSON.stringify({ n: state.n, interval: state.interval, auto: state.auto, g: state.g }));
+let cleanups = [], pageCount = 1;
+
+function tileFor(cam) {
+  const tile = tpl.content.firstElementChild.cloneNode(true);
+  tile.querySelector('.id').textContent = 'ccs' + cam.id;
+  tile.querySelector('.name').textContent = cam.name;
+  tile.querySelector('.grp').textContent = cam.group;
+  tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
+  tile.onclick = () => toggleFocus(tile);
+  tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFocus(tile); } };
+  cleanups.push(play(tile, cam));
+  return tile;
+}
+
+function render() {
+  cleanups.forEach(stop => stop());
+  cleanups = [];
+  const pages = chunk(camsFor(state.g), state.n * state.n);
+  pageCount = pages.length;
+  state.page = wrap(state.page, pageCount);
+  grid.classList.remove('has-focus');
+  grid.style.setProperty('--n', state.n);
+  grid.replaceChildren(...pages[state.page].map(tileFor));
+  sync();
+}
+
+function sync() {
+  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.n === state.n));
+  $('auto').setAttribute('aria-pressed', state.auto);
+  $('group').value = state.g;
+  $('interval').value = state.interval;
+  $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ' : `หน้า ${state.page + 1} จาก ${pageCount}`;
+}
+
+$('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
+$('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); render(); };
+document.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => { state.n = +b.dataset.n; state.page = 0; save(); render(); }; });
+
+// ── tour ──
+let due = 0;
+const resetTimer = () => { due = Date.now() + state.interval * 1000; };
+
+function go(step) {
+  if (pageCount < 2) return resetTimer(); // มีหน้าเดียว ไม่ต้อง render ใหม่ ภาพจะได้ไม่เริ่มใหม่
+  state.page += step;
+  render();
+  resetTimer();
+}
+
+function toggleFocus(tile) {
+  const on = !tile.classList.contains('focused');
+  grid.querySelector('.focused')?.classList.remove('focused');
+  tile.classList.toggle('focused', on);
+  grid.classList.toggle('has-focus', on);
+  resetTimer();
+  sync();
+}
+
+function tick() {
+  $('clock').textContent = new Date().toLocaleTimeString('th-TH', { hour12: false });
+  const running = state.auto && !grid.classList.contains('has-focus');
+  if (!running) resetTimer();
+  const left = due - Date.now();
+  $('progress').style.width = running ? `${Math.min(100, 100 - left / (state.interval * 10))}%` : '0%';
+  if (left <= 0) go(1);
+}
+
+async function probe() {
+  const ids = camsFor(-1).map(c => c.id);
+  const ok = await Promise.all(ids.map(id => fetch(SRC(id), { cache: 'no-store' }).then(r => r.ok, () => false)));
+  $('live').lastElementChild.textContent = `ออนไลน์ ${ok.filter(Boolean).length}/${ids.length}`;
+}
+
+$('prev').onclick = () => go(-1);
+$('next').onclick = () => go(1);
+$('auto').onclick = () => { state.auto = !state.auto; save(); sync(); };
+$('interval').onchange = e => { state.interval = +e.target.value; save(); resetTimer(); };
+
+const fs = $('fs');
+fs.hidden = !document.fullscreenEnabled; // iOS Safari เปิดเต็มจอทั้งหน้าไม่ได้
+fs.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+document.onfullscreenchange = () => { fs.textContent = document.fullscreenElement ? 'ออกจากเต็มจอ' : 'เต็มจอ'; };
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
+  const onControl = e.target.closest('button, [role="button"]'); // ปุ่มจัดการ Space/Enter เองอยู่แล้ว
+  if (e.code === 'Space' && !onControl) { e.preventDefault(); $('auto').click(); }
+  else if (e.key === 'ArrowRight') go(1);
+  else if (e.key === 'ArrowLeft') go(-1);
+  else if (e.code === 'KeyF' && !fs.hidden) fs.click(); // ใช้ e.code เพื่อให้ใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย
+  else if (e.key === 'Escape') { const t = grid.querySelector('.focused'); if (t) toggleFocus(t); }
+});
+
+// ── start ──
+render();
+resetTimer();
+tick();
+setInterval(tick, 250);
+probe();
+setInterval(probe, 60_000);
+
+// ── self-check (เปิด index.html#test) ──
+if (location.hash === '#test') {
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const checks = [
+    ['chunk แบ่งหน้าและหน้าสุดท้ายไม่เต็ม', eq(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]])],
+    ['chunk ของ list ว่าง', eq(chunk([], 4), [])],
+    ['wrap เลยหน้าสุดท้ายกลับหน้าแรก', wrap(5, 5) === 0],
+    ['wrap ถอยจากหน้าแรกไปหน้าสุดท้าย', wrap(-1, 5) === 4],
+    ['ทุกจุดมี 40 กล้องไม่ซ้ำ', camsFor(-1).length === 40],
+    ['ตัวซ้ำเก็บกลุ่มแรกที่เจอ', camsFor(-1).find(c => c.id === '13').g === 4],
+    ['กรองทางแยกแล้วตัวซ้ำยังอยู่', camsFor(5).length === 4],
+    ['ทุกทางแยกมีกล้อง', GROUPS.every((_, g) => camsFor(g).length > 0)],
+  ];
+  document.title = checks.every(([, ok]) => ok) ? 'TEST PASS' : 'TEST FAIL';
+  document.body.insertAdjacentHTML('afterbegin', `<pre class="test">${checks.map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join('\n')}</pre>`);
+}
+</script>
+</body>
+</html>
