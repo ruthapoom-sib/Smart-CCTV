@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js"></script>
 <style>
 :root {
   --asphalt: #1F2327;
@@ -78,6 +79,15 @@ select { max-width: 17em; }
 .lane { position: relative; flex: 1; min-width: 80px; height: 4px; background: repeating-linear-gradient(90deg, var(--kerb) 0 24px, transparent 24px 36px); }
 .lane i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(90deg, var(--lane) 0 24px, transparent 24px 36px); transition: width .25s linear; }
 
+/* ไฟสัญญาณ: เหลือง = กำลังเชื่อมต่อ, เขียว = live, แดง = ไม่มีสัญญาณ */
+.lamp { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--lane); box-shadow: 0 0 0 3px rgb(0 0 0 / .55); }
+.tile[data-state="connecting"] .lamp { animation: blink 1s ease-in-out infinite; }
+.tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 3px rgb(0 0 0 / .55), 0 0 10px var(--go); }
+.tile[data-state="offline"] .lamp, .tile[data-state="unsupported"] .lamp { background: var(--stop); }
+.tile[data-state="offline"], .tile[data-state="unsupported"] { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
+.msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
+@keyframes blink { 50% { opacity: .2; } }
+
 @media (max-width: 700px) {
   body { height: auto; min-height: 100dvh; }
   .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
@@ -129,6 +139,8 @@ select { max-width: 17em; }
 <template id="tile-tpl">
   <figure class="tile" role="button" tabindex="0" data-state="connecting">
     <video muted autoplay playsinline></video>
+    <span class="lamp" aria-hidden="true"></span>
+    <p class="msg"></p>
     <figcaption class="sign"><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
   </figure>
 </template>
@@ -159,6 +171,52 @@ const wrap = (i, len) => ((i % len) + len) % len;
 const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
 const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
 
+// ── player ──
+const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
+
+function play(tile, cam) {
+  const video = tile.querySelector('video');
+  let hls = null, fails = 0, timer;
+  video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
+  const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
+  const stop = () => {
+    clearTimeout(timer);
+    hls?.destroy();
+    hls = null;
+    video.onerror = null;
+    video.removeAttribute('src');
+    video.load();
+  };
+  const retry = ms => { stop(); timer = setTimeout(start, ms); };
+  const offline = () => { set('offline'); retry(30_000); };
+
+  function start() {
+    set('connecting');
+    if (window.Hls?.isSupported()) {
+      let recovered = false;
+      hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_, d) => {
+        if (!d.fatal) return;
+        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) { recovered = true; hls.recoverMediaError(); }
+        else if (d.type === Hls.ErrorTypes.NETWORK_ERROR && ++fails < 3) retry(3000);
+        else offline();
+      });
+      hls.loadSource(SRC(cam.id));
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // iOS Safari
+      video.onerror = offline;
+      video.src = SRC(cam.id);
+    } else {
+      set('unsupported');
+    }
+  }
+
+  video.onplaying = () => { fails = 0; set('live'); };
+  start();
+  return stop;
+}
+
 // ── ui ──
 const $ = id => document.getElementById(id);
 const grid = $('grid'), tpl = $('tile-tpl');
@@ -180,6 +238,7 @@ function tileFor(cam) {
   tile.querySelector('.name').textContent = cam.name;
   tile.querySelector('.grp').textContent = cam.group;
   tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
+  cleanups.push(play(tile, cam));
   return tile;
 }
 
