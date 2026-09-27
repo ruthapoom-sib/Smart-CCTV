@@ -1,0 +1,16 @@
+{
+  "name": "chachoengsao-traffic-cameras",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Static public traffic camera viewer for Chachoengsao",
+  "scripts": {
+    "start": "node tools/serve.cjs",
+    "build": "node tools/build.cjs",
+    "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs",
+    "test:browser": "node tests/browser.cjs",
+    "test:live": "node tests/live.cjs",
+    "check": "node --check scripts/data.js && node --check scripts/core.js && node --check scripts/player.js && node --check scripts/app.js && npm test"
+  },
+  "devDependencies": { "playwright": "1.63.0" },
+  "engines": { "node": ">=20" }
+}

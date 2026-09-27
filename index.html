@@ -1,572 +1,76 @@
 <!doctype html>
 <html lang="th">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>กล้องจราจรฉะเชิงเทรา</title>
-<meta name="description" content="ภาพสดกล้อง CCTV จราจร 40 จุด ในเขตเทศบาลเมืองฉะเชิงเทรา">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='5' width='30' height='22' rx='5' fill='%230A6B47'/%3E%3Crect x='3.5' y='7.5' width='25' height='17' rx='3' fill='none' stroke='%23F6F6F1' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23F6F6F1'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js"></script>
-<script>
-// Vercel Web Analytics (แบบ HTML ธรรมดา ไม่ต้องใช้ npm) ไม่โหลดตอนเปิดในเครื่อง/วง LAN เพราะ path นี้มีเฉพาะบน Vercel
-window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-if (location.protocol === 'https:' && !/^(localhost|127\.|10\.|192\.168\.)/.test(location.hostname)) {
-  document.head.append(Object.assign(document.createElement('script'), { defer: true, src: '/_vercel/insights/script.js' }));
-}
-</script>
-<style>
-:root {
-  --asphalt: #1F2327;
-  --kerb: #343A40;
-  --sign: #0A6B47;
-  --paint: #F6F6F1;
-  --lane: #F2B705;
-  --stop: #E5484D;
-  --go: #2FBF71;
-  --dim: #9BA4AC;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; margin: 0; }
-body {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100vh;
-  height: 100dvh;
-  background: var(--asphalt);
-  color: var(--paint);
-  font: 15px/1.5 Anuphan, system-ui, sans-serif;
-}
-.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 10px 16px; }
-.brand h1 { font-size: 21px; font-weight: 700; line-height: 1.2; }
-.brand p { font-size: 13px; color: var(--dim); }
-.status { display: flex; align-items: center; gap: 16px; margin-right: auto; font-variant-numeric: tabular-nums; }
-.live { display: inline-flex; align-items: center; gap: 8px; }
-.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); box-shadow: 0 0 8px var(--go); }
-#clock { color: var(--dim); }
-.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-button, select { font: inherit; font-size: 14px; color: inherit; background: var(--kerb); border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#prev, #next, #fs { padding-inline: 8px; }
-select { max-width: 17em; }
-.seg { display: inline-flex; padding: 2px; background: var(--kerb); border-radius: 6px; }
-.seg button { padding: 4px 10px; background: none; border-radius: 4px; }
-.seg button[aria-pressed="true"] { background: var(--paint); color: var(--asphalt); font-weight: 600; }
-:focus-visible { outline: 2px solid var(--lane); outline-offset: 2px; }
-
-.grid {
-  --cols: 3;
-  --rows: 3;
-  display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
-  gap: 6px;
-  padding: 0 16px;
-}
-/* ช่องกล้อง = ภาพด้านบน + แถบป้ายบอกทางด้านล่าง ไม่มีอะไรทับภาพ */
-.tile { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; background: #15181B; border-radius: 6px; cursor: zoom-in; container-type: inline-size; }
-.screen { position: relative; min-height: 0; background: #000; }
-.tile video { display: block; width: 100%; height: 100%; object-fit: contain; }
-
-/* แถบชื่อใต้ภาพ: สีเทาเข้มเรียบ ไม่แย่งสายตาจากภาพ มีสีแค่ไฟสถานะ */
-.sign {
-  display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; align-items: center;
-  padding: 6px 12px 7px;
-  color: var(--paint);
-  border-top: 1px solid rgb(255 255 255 / .06);
-}
-.sign .lamp, .sign .id { grid-row: span 2; }
-.sign .id { padding: 1px 6px; background: rgb(255 255 255 / .08); color: var(--dim); border-radius: 4px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.sign .name, .sign .grp { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.35; }
-.sign .name { font-size: 14px; font-weight: 600; }
-.sign .grp { font-size: 12px; color: var(--dim); }
-@container (max-width: 420px) {
-  .sign { padding: 4px 9px 5px; column-gap: 6px; }
-  .sign .name { font-size: 12.5px; }
-  .sign .grp { font-size: 11px; }
-}
-@container (max-width: 300px) {
-  .sign .grp { display: none; }
-  .tile .msg { font-size: 12px; }
-}
-@container (max-width: 220px) {
-  .sign { padding: 3px 7px 4px; column-gap: 5px; }
-  .sign .id { padding: 0 4px; font-size: 10.5px; }
-  .sign .name { font-size: 11px; }
-  .sign .lamp { width: 7px; height: 7px; }
-}
-
-.foot { gap: 16px; font-size: 13px; color: var(--dim); }
-.foot a { color: var(--paint); }
-.credit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-.credit a { display: inline-flex; }
-.credit small { opacity: .7; }
-#page { min-width: 10em; font-variant-numeric: tabular-nums; }
-/* เส้นประแบ่งช่องจราจร: สีเหลืองเติมเต็มเมื่อใกล้เปลี่ยนหน้า */
-.lane { position: relative; flex: 1; min-width: 80px; height: 4px; background: repeating-linear-gradient(90deg, var(--kerb) 0 24px, transparent 24px 36px); }
-.lane i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(90deg, var(--lane) 0 24px, transparent 24px 36px); transition: width .25s linear; }
-
-/* ไฟสัญญาณ: เหลือง = กำลังเชื่อมต่อ, เขียว = live, แดง = ไม่มีสัญญาณ */
-.lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--lane); box-shadow: 0 0 0 2px rgb(0 0 0 / .3); }
-.tile[data-state="connecting"] .lamp { animation: blink 1s ease-in-out infinite; }
-.tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 2px rgb(0 0 0 / .3), 0 0 8px var(--go); }
-.tile[data-state="offline"] .lamp, .tile[data-state="unsupported"] .lamp { background: var(--stop); }
-.tile[data-state="offline"] .screen, .tile[data-state="unsupported"] .screen { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
-.tile[data-state="blocked"] { cursor: pointer; }
-.tile[data-state="blocked"] .msg { background: rgb(0 0 0 / .55); color: var(--paint); font-size: 15px; font-weight: 600; }
-.msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
-@keyframes blink { 50% { opacity: .2; } }
-/* skeleton ระหว่างเชื่อมต่อ แทนจอดำ */
-.tile[data-state="connecting"] .screen { background: linear-gradient(100deg, #0E1113 30%, #1B1F23 50%, #0E1113 70%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
-@keyframes shimmer { to { background-position: -200% 0; } }
-/* View Transitions: เปลี่ยน layout/หน้า/ขยายกล้องแบบนุ่มนวล */
-::view-transition-group(*) { animation-duration: .28s; }
-
-.grid.has-focus { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-.grid.has-focus .tile:not(.focused) { display: none; }
-.tile.focused { cursor: zoom-out; }
-
-/* มือถือ: ปัดซ้าย-ขวาทีละกล้อง (JS ใส่ class swipe ตาม SWIPE media query) */
-.grid.swipe { position: relative; display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
-.grid.swipe::-webkit-scrollbar { display: none; }
-.grid.swipe .tile { flex: 0 0 100%; grid-template-rows: auto auto; align-self: start; scroll-snap-align: center; scroll-snap-stop: always; cursor: default; }
-.grid.swipe .screen { aspect-ratio: 16 / 9; }
-.grid.swipe .sign { padding: 10px 14px 12px; column-gap: 10px; }
-.grid.swipe .sign .name { font-size: 17px; white-space: normal; }
-.grid.swipe .sign .grp { display: block; font-size: 14px; white-space: normal; }
-
-/* มือถือ "ทั้งหมด": ตาราง 2 คอลัมน์ เลื่อนขึ้นลงดูครบทุกกล้อง */
-.grid.mall { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
-.grid.mall .tile { grid-template-rows: auto auto; cursor: pointer; }
-.grid.mall .screen { aspect-ratio: 16 / 9; }
-
-@media (max-width: 700px) {
-  body { height: auto; min-height: 100dvh; padding-bottom: calc(60px + env(safe-area-inset-bottom)); } /* เว้นที่ให้แถบควบคุมด้านล่าง */
-  header.bar { gap: 8px 12px; padding-bottom: 8px; }
-  .brand h1 { font-size: 18px; }
-  .brand p { display: none; }
-  .status { margin-right: 0; }
-  #group { flex: 1 1 100%; max-width: none; }
-  /* ปุ่มควบคุมย้ายไปแถบล่างที่นิ้วโป้งกดถึง */
-  .controls { position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; flex-wrap: nowrap; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgb(21 24 27 / .92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid rgb(255 255 255 / .06); }
-  #interval { display: none; }
-  .sizes [data-n="4"], .sizes [data-n="9"], .sizes [data-n="16"] { display: none; } /* มือถือเหลือ 1 จอ (ปัด) กับ ทั้งหมด */
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before { animation: none !important; transition: none !important; }
-}
-.test.env { top: auto; bottom: 8px; right: 8px; white-space: pre-wrap; }
-.test { position: fixed; z-index: 9; top: 8px; left: 8px; margin: 0; padding: 12px 16px; background: #000; color: #fff; border: 1px solid #F2B705; font: 13px/1.6 ui-monospace, monospace; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101419">
+  <meta name="description" content="ดูกล้องจราจรฉะเชิงเทรา 40 จุด ค้นหาทางแยก บันทึกกล้องโปรด และดูภาพสดได้ทั้งมือถือและคอมพิวเตอร์">
+  <title>กล้องจราจรฉะเชิงเทรา · CCTV Live</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/hls-1.7.3.min.js"></script>
+  <script defer src="scripts/data.js"></script>
+  <script defer src="scripts/core.js"></script>
+  <script defer src="scripts/player.js"></script>
+  <script defer src="scripts/app.js"></script>
 </head>
 <body>
-<!-- ไอคอนแบบ Lucide (stroke 2px) ใช้ผ่าน <use href="#i-…"> -->
-<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<a class="skip-link" href="#workspace">ข้ามไปดูกล้อง</a>
+<svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="3"/><circle cx="12" cy="11.5" r="3"/><path d="M9 21h6M12 18v3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z"/></symbol>
   <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
-  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
-  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
-  <symbol id="i-max" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
-  <symbol id="i-min" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.01"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
 </svg>
-<header class="bar">
-  <div class="brand">
-    <h1>กล้องจราจรฉะเชิงเทรา</h1>
-    <p>ภาพสด 40 จุด ในเขตเทศบาลเมืองฉะเชิงเทรา</p>
-  </div>
-  <div class="status">
-    <span class="live" id="live"><i></i><span>กำลังตรวจสอบสัญญาณ…</span></span>
-    <time id="clock"></time>
-  </div>
-  <select id="group" aria-label="เลือกทางแยก"></select>
-  <div class="controls">
-    <div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า">
-      <button type="button" data-n="1">1 จอ</button>
-      <button type="button" data-n="4">4 จอ</button>
-      <button type="button" data-n="9">9 จอ</button>
-      <button type="button" data-n="16">16 จอ</button>
-      <button type="button" data-n="all">ทั้งหมด</button>
-    </div>
-    <div class="seg" role="group" aria-label="เปลี่ยนหน้า">
-      <button type="button" id="prev" aria-label="ก่อนหน้า" title="ก่อนหน้า (←)"><svg class="ico"><use href="#i-left"/></svg></button>
-      <button type="button" id="auto" aria-pressed="false" title="วนอัตโนมัติ (Space)"><svg class="ico"><use href="#i-play"/></svg><span>วนอัตโนมัติ</span></button>
-      <button type="button" id="next" aria-label="ถัดไป" title="ถัดไป (→)"><svg class="ico"><use href="#i-right"/></svg></button>
-    </div>
-    <select id="interval" aria-label="เวลาต่อหน้า">
-      <option value="10">ทุก 10 วินาที</option>
-      <option value="15">ทุก 15 วินาที</option>
-      <option value="30">ทุก 30 วินาที</option>
-      <option value="60">ทุก 1 นาที</option>
-    </select>
-    <button type="button" id="fs" aria-label="เต็มจอ" title="เต็มจอ (F)"><svg class="ico"><use href="#i-max"/></svg></button>
-  </div>
+<header class="site-header">
+  <div class="brand"><span class="brand-mark"><svg class="ico" aria-hidden="true"><use href="#i-camera"/></svg></span><div><h1>ฉะเชิงเทรา<span class="brand-divider">/</span><span class="brand-purpose">กล้องจราจร</span></h1><p class="eyebrow">ภาพสด 40 จุด · 10 ทางแยกทั่วเมือง</p></div></div>
+  <div class="header-context"><div class="clock"><time id="clock">--:--:--</time><span>เวลาประเทศไทย</span></div><button id="help" class="icon-button" aria-label="วิธีใช้งาน" title="วิธีใช้งาน"><svg class="ico"><use href="#i-info"/></svg></button></div>
 </header>
-<main id="grid" class="grid"></main>
-<footer class="bar foot">
-  <span id="page"></span>
-  <div class="lane" aria-hidden="true"><i id="progress"></i></div>
-  <span class="credit">
-    <a href="https://github.com/ruthapoom-sib/Smart-CCTV" target="_blank" rel="noopener" aria-label="ซอร์สโค้ดบน GitHub"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
-    <span>ออกแบบและพัฒนาโดย Ruthapoom Sib © 2026</span>
-    <small>แหล่งภาพ: <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener">ITIC</a></small>
-  </span>
-</footer>
+<section class="toolbar" aria-label="ค้นหาและเลือกกล้อง">
+  <div class="filters">
+    <div class="search-field"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="ค้นหากล้อง ถนน หรือทางแยก…" aria-label="ค้นหากล้อง ถนน หรือทางแยก" autocomplete="off" maxlength="120"><button id="clear-search" class="icon-button" aria-label="ล้างคำค้นหา" hidden><svg class="ico"><use href="#i-close"/></svg></button></div>
+    <div class="group-field"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg><select id="group" aria-label="เลือกทางแยก"></select></div>
+    <button id="favorites" class="favorite-filter" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-star"/></svg><span>กล้องโปรด</span><span id="favorite-count">0</span></button>
+  </div>
+</section>
+<main id="workspace" tabindex="-1">
+  <div class="workspace-bar">
+    <div class="workspace-heading"><h2 id="view-title">ทุกทางแยก</h2><span id="result-count"></span></div>
+    <div class="workspace-tools">
+      <div class="view-options"><span class="view-label">มุมมอง</span><div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า"><button data-n="1">1<span> จอ</span></button><button data-n="4">4<span> จอ</span></button><button data-n="9">9<span> จอ</span></button><button data-n="16">16<span> จอ</span></button><button data-n="all">ทั้งหมด</button></div><button id="fs" class="icon-button" aria-label="เต็มจอ" title="เต็มจอ (F)"><svg class="ico"><use href="#i-max"/></svg></button></div>
+      <div class="workspace-actions"><span id="live" class="live-status" role="status" aria-live="polite"><i aria-hidden="true"></i><span>กำลังเชื่อมต่อ…</span></span><button id="refresh" class="icon-button" aria-label="เชื่อมต่อกล้องบนจอใหม่" title="เชื่อมต่อกล้องบนจอใหม่"><svg class="ico"><use href="#i-refresh"/></svg></button><button id="exit-focus" hidden><svg class="ico" aria-hidden="true"><use href="#i-min"/></svg>กลับทุกจอ</button></div>
+    </div>
+  </div>
+  <div id="network-notice" class="notice" role="status" hidden>ไม่มีการเชื่อมต่ออินเทอร์เน็ต · จะเชื่อมต่อกล้องใหม่เมื่อกลับมาออนไลน์</div>
+  <div id="grid" class="grid" aria-label="ภาพจากกล้องจราจร"></div>
+  <div id="empty" class="empty" hidden><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><h3 id="empty-title">ไม่พบกล้องที่ค้นหา</h3><p id="empty-description">ลองเปลี่ยนคำค้นหาหรือเลือกทางแยกอื่น</p><button id="reset-filters">แสดงกล้องทั้งหมด</button></div>
+  <div class="playback-bar"><p id="page" aria-live="polite"></p><div class="tour-progress" aria-hidden="true"><i id="progress"></i></div><div class="playback-controls"><button id="prev" class="icon-button" aria-label="ก่อนหน้า" title="ก่อนหน้า (←)"><svg class="ico"><use href="#i-left"/></svg></button><button id="auto" aria-pressed="false" title="วนอัตโนมัติ (Space)"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>วนอัตโนมัติ</span></button><button id="next" class="icon-button" aria-label="ถัดไป" title="ถัดไป (→)"><svg class="ico"><use href="#i-right"/></svg></button><select id="interval" aria-label="เวลาต่อหน้า"><option value="10">10 วินาที</option><option value="15">15 วินาที</option><option value="30">30 วินาที</option><option value="60">1 นาที</option></select></div></div>
+</main>
+<footer class="site-footer"><p>ภาพจาก <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener noreferrer">ITIC</a> · ภาพอาจล่าช้าหรือขาดช่วงตามสัญญาณต้นทาง</p><p>ออกแบบและพัฒนาโดย <a href="https://github.com/ruthapoom-sib/Smart-CCTV" target="_blank" rel="noopener noreferrer">Ruthapoom Sib</a> <span>© 2026</span></p></footer>
 <template id="tile-tpl">
-  <figure class="tile" role="button" tabindex="0" data-state="connecting">
-    <div class="screen"><video muted playsinline></video><p class="msg"></p></div>
-    <figcaption class="sign"><span class="lamp" aria-hidden="true"></span><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
-  </figure>
+  <article class="tile" data-state="paused">
+    <div class="screen"><video muted playsinline preload="none" aria-hidden="true" tabindex="-1"></video><p class="msg">กำลังเชื่อมต่อภาพสด…</p><button class="camera-open" aria-label="ขยายกล้อง"><span class="expand-hint"><svg class="ico" aria-hidden="true"><use href="#i-max"/></svg></span></button></div>
+    <div class="caption">
+      <span class="camera-id"></span>
+      <div class="camera-copy"><h3 class="name"></h3><p class="grp"></p></div>
+      <div class="caption-actions"><span class="camera-state"><i class="lamp" aria-hidden="true"></i><span class="state-label">รอเชื่อมต่อ</span></span><button class="favorite-button icon-button" aria-label="เพิ่มกล้องโปรด" aria-pressed="false"><svg class="ico" aria-hidden="true"><use href="#i-star"/></svg></button></div>
+    </div>
+  </article>
 </template>
-<script>
-// ── data ── (ที่มา: sites.google.com/view/ccs-cctv หน้า "รวมทุกจุด", 2026-09-27)
-const SRC = id => `https://camerai1.iticfoundation.org/hls/ccs${id}.m3u8`;
-const GROUPS = [
-  ['สามแยกเทพคุณากร – สิริโสธร', [['03', 'มุ่งหน้าชลบุรี'], ['05', 'มุ่งหน้าเมืองฉะเชิงเทรา'], ['06', 'ถ.เทพคุณากร']]],
-  ['สามแยกเทพคุณากร – วัดบางพระ', [['01', 'มุ่งหน้าถนนสิริโสธร'], ['00', 'มุ่งหน้าวัดโสธรฯ'], ['02', 'มุ่งหน้าวัดบางพระ']]],
-  ['วัดโสธรวรารามวรวิหาร – ถ.เทพคุณากร', [['22', 'โค้งหน้าวัดโสธรวรารามฯ'], ['23', 'หน้าวัดโสธรวรารามฯ'], ['24', 'หน้า รร.วัดโสธรวรารามฯ'], ['25', 'ซ.เทพคุณากร 5']]],
-  ['วงเวียนอนุสาวรีย์พระยาศรีสุนทรโวหาร', [['09', 'มุ่งหน้า ถ.ศรีโสธร'], ['08', 'หน้าอนุสาวรีย์'], ['07', 'มุ่งหน้า ถ.เทพคุณากร'], ['12', 'มุ่งหน้า ถ.ศรีโสธรตัดใหม่']]],
-  ['ทางแยก–ทางร่วม ถ.ศรีโสธรตัดใหม่', [['13', 'หน้าบิ๊กซี 2 (มุ่งหน้าวงเวียน)'], ['14', 'หน้าบิ๊กซี 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)'], ['28', 'ถ.ประชาสรรค์'], ['29', 'ศรีโสธรตัดใหม่ 15'], ['26', 'ศรีโสธรตัดใหม่ 18 (มุมที่ 1)'], ['27', 'ศรีโสธรตัดใหม่ 18 (มุมที่ 2)']]],
-  ['สามแยก ถ.พระยาศรีสุนทร – ถ.ศรีโสธรตัดใหม่', [['15', 'มุ่งหน้า ถ.มหาจักรพรรดิ์'], ['16', 'มุ่งหน้าวงเวียน'], ['13', 'หน้าบิ๊กซี 2 (มุ่งหน้าวงเวียน)'], ['14', 'หน้าบิ๊กซี 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)']]],
-  ['สามแยกหน้าเมือง – ศาลากลางจังหวัด', [['30', 'สามแยก ถ.หน้าเมือง'], ['42', 'ศาลากลางจังหวัดฉะเชิงเทรา']]],
-  ['ถ.ศรีโสธรตัดใหม่ – ถ.เอมอรอุทิศ', [['19', 'ถ.เอมอรอุทิศ 1 (จุดที่ 1)'], ['31', 'ถ.เอมอรอุทิศ 1 (จุดที่ 2)'], ['17', 'ถ.เอมอรอุทิศ 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)'], ['18', 'ถ.เอมอรอุทิศ 2 (มุ่งหน้าวงเวียน)'], ['34', 'ศรีโสธรตัดใหม่ 4/1 (มุมที่ 1)'], ['35', 'ศรีโสธรตัดใหม่ 4/1 (มุมที่ 2)'], ['32', 'ศรีโสธรตัดใหม่ 5 (มุมที่ 1)'], ['33', 'ศรีโสธรตัดใหม่ 5 (มุมที่ 2)']]],
-  ['สามแยกศรีโสธรตัดใหม่ – มหาจักรพรรดิ์', [['20', 'มุ่งหน้ากรุงเทพฯ'], ['21', 'มุ่งหน้าเข้าเมืองฉะเชิงเทรา'], ['36', 'กลางทางแยก (1)'], ['37', 'กลางทางแยก (2)']]],
-  ['เทศบาลเมืองฯ – มหาจักรพรรดิ์', [['38', 'สามแยกเทศบาล (1)'], ['39', 'สามแยกเทศบาล (2)'], ['40', 'หน้า รร.เทพประสิทธิ์วิทยา (1)'], ['41', 'หน้า รร.เทพประสิทธิ์วิทยา (2)']]],
-];
-const CAMS = GROUPS.flatMap(([group, cams], g) => cams.map(([id, name]) => ({ id, name, group, g })));
-
-// ── logic ──
-const chunk = (list, size) => {
-  const out = [];
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
-  return out;
-};
-const wrap = (i, len) => ((i % len) + len) % len;
-const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
-const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
-// iPhone/iPad ใช้ HLS ในตัวของ iOS ก่อน: iOS เก่า (ไม่มี MediaSource) ใช้ทางนี้อยู่แล้วและเล่นได้
-// ส่วน hls.js บน ManagedMediaSource ของ iOS 27 ค้างที่ "กำลังเชื่อมต่อ"
-// ที่อื่นใช้ hls.js ก่อน เพราะ Chrome บอกว่าเล่น m3u8 ได้ แต่เล่นสตรีม TS นี้ไม่ได้จริง
-const pickPlayer = ({ ua, touch, hls, native, force }) => {
-  if (force) return force;
-  const apple = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
-  if (apple && native) return 'native';
-  return hls ? 'hls' : native ? 'native' : 'none';
-};
-// เบราว์เซอร์ในตัว Smart TV (Samsung Tizen, LG webOS ฯลฯ) ถอดรหัสวิดีโอได้ทีละภาพ จึงเปิดมาเป็น 1 จอ
-const isTV = ua => /Tizen|Web0S|webOS|SMART-TV|SmartTV|HbbTV|NetCast|BRAVIA/i.test(ua);
-// หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h (strip = ความสูงแถบชื่อใต้ภาพ)
-const fit = (n, w, h, strip = 0) => {
-  let best = [1, n], bestW = 0;
-  for (let cols = 1; cols <= n; cols++) {
-    const rows = Math.ceil(n / cols);
-    const tileW = Math.min(w / cols, (h / rows - strip) * 16 / 9);
-    if (tileW > bestW) { bestW = tileW; best = [cols, rows]; }
-  }
-  return best;
-};
-
-// ── player ──
-const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', blocked: 'แตะเพื่อเล่นภาพสด', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
-
-const PLAYER = pickPlayer({
-  ua: navigator.userAgent,
-  touch: navigator.maxTouchPoints || 0,
-  hls: !!window.Hls?.isSupported(),
-  native: !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl'),
-  force: ['hls', 'native'].find(p => p === new URLSearchParams(location.search).get('player')), // ทดสอบบนเครื่องจริง: ?player=hls หรือ ?player=native
-});
-
-const DEBUG = new URLSearchParams(location.search).has('debug');
-
-function play(tile, cam) {
-  const video = tile.querySelector('video');
-  let hls = null, fails = 0, timer, lastT = -1, still = 0;
-  video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
-  const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
-  // ไม่ใช้ attribute autoplay เพราะ iOS (เช่นโหมดประหยัดพลังงาน) ข้ามไปเงียบๆ; เรียก play() เองจะได้รู้ว่าโดนบล็อก
-  const tryPlay = () => video.play().catch(e => { if (e.name === 'NotAllowedError') set('blocked'); });
-  const stop = () => {
-    clearTimeout(timer);
-    hls?.destroy();
-    hls = null;
-    video.onerror = null;
-    video.removeAttribute('src');
-    video.load();
-  };
-  const retry = ms => { stop(); timer = setTimeout(start, ms); };
-  const offline = () => { set('offline'); retry(30_000); };
-
-  function start() {
-    set('connecting');
-    if (PLAYER === 'hls') {
-      let recovered = false;
-      hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
-      hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
-      hls.on(Hls.Events.ERROR, (_, d) => {
-        if (!d.fatal) return;
-        if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) { recovered = true; hls.recoverMediaError(); }
-        else if (d.type === Hls.ErrorTypes.NETWORK_ERROR && ++fails < 3) retry(3000);
-        else offline();
-      });
-      hls.loadSource(SRC(cam.id));
-      hls.attachMedia(video);
-    } else if (PLAYER === 'native') { // iPhone/iPad
-      video.onerror = offline;
-      video.src = SRC(cam.id);
-      tryPlay();
-    } else {
-      set('unsupported');
-    }
-  }
-
-  video.onplaying = () => { fails = 0; set('live'); };
-  if (DEBUG) { // ?debug: แสดงสถานะวิดีโอจริงบนแถบชื่อ ไว้ไล่ปัญหาบนมือถือ
-    const seen = [];
-    ['play', 'playing', 'pause', 'waiting', 'stalled', 'suspend', 'emptied', 'ended', 'error'].forEach(ev => video.addEventListener(ev, () => { seen.push(ev); seen.splice(0, seen.length - 4); }));
-    const dbg = setInterval(() => {
-      if (!tile.isConnected) return clearInterval(dbg);
-      tile.querySelector('.grp').textContent = `${PLAYER} rs${video.readyState} ns${video.networkState} t${video.currentTime.toFixed(1)} ${video.videoWidth}x${video.videoHeight} ${video.paused ? 'PAUSED' : 'run'} err${video.error?.code ?? '-'} [${seen.join(',')}]`;
-    }, 1000);
-  }
-  video.onended = () => { set('connecting'); retry(3000); };
-  // ภาพค้างไม่มี error ให้จับ (กล้องดับแต่ server ยังเสิร์ฟ playlist เดิม): live แต่เวลาไม่เดิน 15 s ให้ต่อใหม่
-  const watchdog = setInterval(() => {
-    if (tile.dataset.state !== 'live' || video.paused || document.hidden) { still = 0; return; }
-    if (video.currentTime !== lastT) { lastT = video.currentTime; still = 0; }
-    else if (++still >= 3) { still = 0; set('connecting'); retry(0); }
-  }, 5000);
-  start();
-  return () => { clearInterval(watchdog); stop(); };
-}
-
-// ── ui ──
-const $ = id => document.getElementById(id);
-const grid = $('grid'), tpl = $('tile-tpl');
-const INTERVALS = [10, 15, 30, 60];
-const SIZES = [1, 4, 9, 16, 'all'];
-const saved = (() => { try { return JSON.parse(localStorage.getItem('cctv')) || {}; } catch { return {}; } })();
-const state = {
-  size: isTV(navigator.userAgent) ? 1 : SIZES.includes(saved.size) ? saved.size : 9, // ทีวีเริ่มที่ 1 จอเสมอ แม้เคยเลือกไว้มากกว่านั้น
-  interval: INTERVALS.includes(saved.interval) ? saved.interval : 15,
-  auto: false, // วนเฉพาะเมื่อผู้ใช้กดเอง และไม่จำค่านี้
-  g: Number.isInteger(saved.g) && saved.g >= -1 && saved.g < GROUPS.length ? saved.g : -1,
-  page: 0,
-};
-const save = () => { try { localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g })); } catch {} }; // เบราว์เซอร์บล็อก storage: ไม่จำค่า แต่ปุ่มยังทำงาน
-let cleanups = [], pageCount = 1;
-const SWIPE = matchMedia('(max-width: 700px)'); // มือถือแนวตั้ง: ปัดทีละกล้องแทนตาราง
-const swiping = () => grid.classList.contains('swipe');
-const scrollToTile = (t, behavior) => grid.scrollTo({ left: t.offsetLeft - (grid.clientWidth - t.offsetWidth) / 2, behavior }); // offsetLeft นับจาก .grid.swipe (position: relative)
-
-function tileFor(cam, autoplay) {
-  const tile = tpl.content.firstElementChild.cloneNode(true);
-  tile.cam = cam;
-  tile.querySelector('.id').textContent = 'ccs' + cam.id;
-  tile.querySelector('.name').textContent = cam.name;
-  tile.querySelector('.grp').textContent = cam.group;
-  tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
-  tile.onclick = () => {
-    if (tile.dataset.state === 'blocked') return; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
-    if (grid.classList.contains('mall')) { state.size = 1; state.page = camsFor(state.g).indexOf(cam); save(); render(); } // มือถือ: แตะจากตารางเพื่อดูทีละกล้อง
-    else if (!swiping()) toggleFocus(tile);
-  };
-  tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tile.click(); } };
-  if (autoplay) cleanups.push(play(tile, cam));
-  return tile;
-}
-
-function render() {
-  cleanups.forEach(stop => stop());
-  cleanups = [];
-  const list = camsFor(state.g);
-  const mobile = SWIPE.matches;
-  const swipe = mobile && state.size !== 'all', mall = mobile && state.size === 'all';
-  const pages = mobile || state.size === 'all' ? [list] : chunk(list, state.size);
-  pageCount = swipe ? list.length : pages.length; // ปัดทีละกล้อง: 1 กล้อง = 1 หน้า สำหรับ ‹ › และวนอัตโนมัติ
-  state.page = wrap(state.page, pageCount);
-  grid.classList.remove('has-focus');
-  grid.classList.toggle('swipe', swipe);
-  grid.classList.toggle('mall', mall);
-  grid.replaceChildren(...(mobile ? list : pages[state.page]).map(cam => tileFor(cam, !mobile)));
-  if (swipe) scrollToTile(watchVisible(grid, i => { state.page = i; sync(); resetTimer(); })[state.page]);
-  else if (mall) watchVisible(null);
-  else layout();
-  sync();
-}
-
-// มือถือเล่นเฉพาะกล้องที่อยู่บนจอ: iPhone ถอดรหัสพร้อมกันได้จำกัด และไม่เปลืองเน็ตกับกล้องที่ยังไม่ได้ดู
-// root = grid (ปัดซ้าย-ขวา) หรือ null (ตาราง "ทั้งหมด" ที่เลื่อนทั้งหน้า)
-function watchVisible(root, onShow) {
-  const tiles = [...grid.children];
-  const io = new IntersectionObserver(entries => entries.forEach(({ target: t, isIntersecting }) => {
-    if (isIntersecting && !t.stop) { t.stop = play(t, t.cam); onShow?.(tiles.indexOf(t)); }
-    else if (!isIntersecting && t.stop) { t.stop(); t.stop = null; t.dataset.state = 'connecting'; t.querySelector('.msg').textContent = ''; } // หยุดแล้วไม่ควรขึ้นไฟเขียว
-  }), { root, threshold: root ? 0.6 : 0.5 });
-  tiles.forEach(t => io.observe(t));
-  cleanups.push(() => { io.disconnect(); tiles.forEach(t => t.stop?.()); });
-  return tiles;
-}
-
-// "ทั้งหมด" คำนวณคอลัมน์ตามขนาดจอจริง ส่วน 4/9/16 เป็นตารางจัตุรัส
-function layout() {
-  const apply = ([cols, rows]) => { grid.style.setProperty('--cols', cols); grid.style.setProperty('--rows', rows); };
-  if (state.size !== 'all') return apply([Math.sqrt(state.size), Math.sqrt(state.size)]);
-  // แถบชื่อสูงไม่เท่ากันตามความกว้างช่อง จึงคำนวณ 2 รอบ รอบสองใช้ความสูงแถบหลังจัดช่องแล้ว
-  for (let i = 0; i < 2; i++) apply(fit(grid.children.length, grid.clientWidth - 32, grid.clientHeight, grid.querySelector('.sign')?.offsetHeight || 0));
-}
-
-function sync() {
-  const shown = swiping() ? 1 : state.size; // มือถือโหมดปัด = ปุ่ม "1 จอ"
-  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === String(shown)));
-  $('auto').setAttribute('aria-pressed', state.auto);
-  $('auto').querySelector('use').setAttribute('href', state.auto ? '#i-pause' : '#i-play');
-  $('group').value = state.g;
-  $('interval').value = state.interval;
-  $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ'
-    : swiping() ? `กล้อง ${state.page + 1} / ${pageCount} ปัดเพื่อดูกล้องถัดไป`
-    : grid.classList.contains('mall') ? `ทั้งหมด ${grid.children.length} กล้อง แตะเพื่อดูทีละกล้อง`
-    : `หน้า ${state.page + 1} จาก ${pageCount}`;
-}
-
-$('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
-// เปลี่ยน layout/หน้า/ขยายกล้องแบบนุ่มนวลด้วย View Transitions ของเบราว์เซอร์ (ไม่รองรับหรือผู้ใช้ขอลดการเคลื่อนไหว = เปลี่ยนทันที)
-const REDUCE = matchMedia('(prefers-reduced-motion: reduce)');
-const transition = fn => (document.startViewTransition && !REDUCE.matches ? document.startViewTransition(fn) : fn());
-
-$('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); transition(render); };
-document.querySelectorAll('[data-n]').forEach(b => {
-  b.onclick = () => {
-    const size = b.dataset.n === 'all' ? 'all' : +b.dataset.n;
-    if (size === state.size) return; // กดปุ่มที่เลือกอยู่แล้ว ไม่ต้องกลับหน้าแรกและเริ่มสตรีมใหม่
-    state.size = size; state.page = 0; save(); transition(render);
-  };
-});
-addEventListener('resize', () => { if (!swiping()) layout(); });
-SWIPE.addEventListener('change', () => { state.page = 0; render(); }); // หมุนจอ/ย่อหน้าต่างข้ามขนาดมือถือ
-
-// ── tour ──
-let due = 0;
-const resetTimer = () => { due = Date.now() + state.interval * 1000; };
-
-function go(step) {
-  if (pageCount < 2) return resetTimer(); // มีหน้าเดียว ไม่ต้อง render ใหม่ ภาพจะได้ไม่เริ่มใหม่
-  state.page = wrap(state.page + step, pageCount);
-  // กระโดดทันที ไม่ใช้ smooth: เลื่อนผ่านหลายกล้อง (เช่นวนจากกล้องแรกไปกล้องสุดท้าย) จะเปิด-ปิด player ทุกกล้องที่ผ่าน
-  // และ IntersectionObserver จะเขียนเลขกล้องทับระหว่างเลื่อนถ้ากดรัวๆ
-  if (swiping()) scrollToTile(grid.children[state.page]);
-  else transition(render);
-  resetTimer();
-}
-
-function toggleFocus(tile) {
-  const on = !tile.classList.contains('focused');
-  tile.style.viewTransitionName = 'cam'; // ให้ช่องนี้ขยาย/หดจากตำแหน่งเดิม แทนการ fade
-  const vt = transition(() => {
-    grid.querySelector('.focused')?.classList.remove('focused');
-    tile.classList.toggle('focused', on);
-    grid.classList.toggle('has-focus', on);
-  });
-  const clear = () => { tile.style.viewTransitionName = ''; };
-  vt?.finished ? vt.finished.finally(clear) : clear();
-  resetTimer();
-  sync();
-}
-
-function tick() {
-  $('clock').textContent = new Date().toLocaleTimeString('th-TH', { hour12: false });
-  const running = state.auto && pageCount > 1 && !grid.classList.contains('has-focus');
-  if (!running) resetTimer();
-  const left = due - Date.now();
-  $('progress').style.width = running ? `${Math.min(100, 100 - left / (state.interval * 10))}%` : '0%';
-  if (left <= 0) go(1);
-}
-
-async function probe() {
-  const ids = camsFor(-1).map(c => c.id);
-  const ok = await Promise.all(ids.map(id => fetch(SRC(id), { cache: 'no-store' }).then(r => r.ok, () => false)));
-  $('live').lastElementChild.textContent = `ออนไลน์ ${ok.filter(Boolean).length}/${ids.length}`;
-}
-
-$('prev').onclick = () => go(-1);
-$('next').onclick = () => go(1);
-$('auto').onclick = () => { state.auto = !state.auto; sync(); };
-
-// แตะครั้งเดียวเริ่มทุกจอที่เบราว์เซอร์บล็อกไว้ ต้องเรียก play() ระหว่างที่ผู้ใช้แตะอยู่ถึงจะผ่าน
-document.addEventListener('click', () => {
-  grid.querySelectorAll('.tile[data-state="blocked"] video').forEach(v => v.play().catch(() => {}));
-}, true);
-$('interval').onchange = e => { state.interval = +e.target.value; save(); resetTimer(); };
-
-const fs = $('fs');
-fs.hidden = !document.fullscreenEnabled; // iOS Safari เปิดเต็มจอทั้งหน้าไม่ได้
-fs.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
-document.onfullscreenchange = () => {
-  const on = !!document.fullscreenElement;
-  fs.querySelector('use').setAttribute('href', on ? '#i-min' : '#i-max');
-  fs.setAttribute('aria-label', on ? 'ออกจากเต็มจอ' : 'เต็มจอ');
-};
-
-// คลิกเมาส์แล้วไม่ให้ปุ่ม/จอค้าง focus ไว้ ไม่งั้น Space/ลูกศรจะไปกดปุ่มนั้นแทนคีย์ลัด (ใช้ Tab จากคีย์บอร์ดได้ตามปกติ)
-document.addEventListener('mousedown', e => { if (e.target.closest('button, .tile')) e.preventDefault(); });
-
-document.addEventListener('keydown', e => {
-  if (e.repeat || e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
-  const onControl = e.target.closest('button, [role="button"]'); // ปุ่มจัดการ Space/Enter เองอยู่แล้ว
-  if ((e.code === 'Space' && !onControl) || e.key === 'MediaPlayPause') { e.preventDefault(); $('auto').click(); } // MediaPlayPause = ปุ่ม ▶❚❚ บนรีโมททีวี
-  else if (e.key === 'ArrowRight') go(1);
-  else if (e.key === 'ArrowLeft') go(-1);
-  else if (e.code === 'KeyF' && !fs.hidden) fs.click(); // ใช้ e.code เพื่อให้ใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย
-  else if (e.key === 'Escape') { const t = grid.querySelector('.focused'); if (t) toggleFocus(t); }
-});
-
-// ── start ──
-render();
-resetTimer();
-tick();
-setInterval(tick, 250);
-probe();
-setInterval(probe, 60_000);
-
-// ── self-check (เปิด index.html#test) ──
-if (location.hash === '#test') {
-  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const checks = [
-    ['chunk แบ่งหน้าและหน้าสุดท้ายไม่เต็ม', eq(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]])],
-    ['chunk ของ list ว่าง', eq(chunk([], 4), [])],
-    ['wrap เลยหน้าสุดท้ายกลับหน้าแรก', wrap(5, 5) === 0],
-    ['wrap ถอยจากหน้าแรกไปหน้าสุดท้าย', wrap(-1, 5) === 4],
-    ['ทุกจุดมี 40 กล้องไม่ซ้ำ', camsFor(-1).length === 40],
-    ['ตัวซ้ำเก็บกลุ่มแรกที่เจอ', camsFor(-1).find(c => c.id === '13').g === 4],
-    ['กรองทางแยกแล้วตัวซ้ำยังอยู่', camsFor(5).length === 4],
-    ['ทุกทางแยกมีกล้อง', GROUPS.every((_, g) => camsFor(g).length > 0)],
-    ['ทั้งหมด 40 จอบนจอ 16:9 ได้ 7×6', eq(fit(40, 1408, 790), [7, 6])],
-    ['ทั้งหมด 3 จอบนจอ 16:9 ใช้ 2×2 เพราะภาพใหญ่กว่าเรียงแถวเดียว', eq(fit(3, 1408, 790), [2, 2])],
-    ['ทั้งหมด 3 จอบนจอกว้างมากเรียงแถวเดียว', eq(fit(3, 2560, 480), [3, 1])],
-    ['ทั้งหมด 1 จอ', eq(fit(1, 1408, 790), [1, 1])],
-    ['ทั้งหมด 40 จอเผื่อความสูงแถบชื่อใต้ภาพ 24px ได้ 7×6', eq(fit(40, 1408, 800, 24), [7, 6])],
-    ['iPhone iOS ใหม่ใช้ HLS ในตัวแม้ hls.js รองรับ', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1', touch: 5, hls: true, native: true }) === 'native'],
-    ['iPad (UA แบบ Mac + จอสัมผัส) ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 5, hls: true, native: true }) === 'native'],
-    ['Mac Safari ใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 0, hls: true, native: true }) === 'hls'],
-    ['Chrome ที่บอกว่าเล่น m3u8 ได้ยังใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0 Safari/537.36', touch: 0, hls: true, native: true }) === 'hls'],
-    ['iPhone เก่าไม่มี hls.js ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X)', touch: 5, hls: false, native: true }) === 'native'],
-    ['?player=hls บังคับใช้ hls.js บน iPhone', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)', touch: 5, hls: true, native: true, force: 'hls' }) === 'hls'],
-    ['ไม่มีทางเล่นเลย', pickPlayer({ ua: 'x', touch: 0, hls: false, native: false }) === 'none'],
-    ['Samsung Tizen เป็นทีวี', isTV('Mozilla/5.0 (SMART-TV; LINUX; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) 94.0.4606.31/7.0 TV Safari/537.36')],
-    ['LG webOS เป็นทีวี', isTV('Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36 WebAppManager')],
-    ['Chrome บนคอมไม่ใช่ทีวี', !isTV('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36')],
-    ['iPhone ไม่ใช่ทีวี', !isTV('Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1')],
-  ];
-  document.title = checks.every(([, ok]) => ok) ? 'TEST PASS' : 'TEST FAIL';
-  document.body.insertAdjacentHTML('afterbegin', `<pre class="test">${checks.map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join('\n')}</pre>`);
-  // ข้อมูลเครื่องสำหรับไล่ปัญหาบนมือถือจริง (ใช้ textContent เพราะ UA มาจากภายนอก)
-  const env = document.createElement('pre');
-  env.className = 'test env';
-  env.textContent = `player=${PLAYER} hls.js=${!!window.Hls?.isSupported()} MMS=${'ManagedMediaSource' in window} MSE=${'MediaSource' in window} secure=${isSecureContext}\n${navigator.userAgent}`;
-  document.body.append(env);
-}
-</script>
+<dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><h2 id="help-title">ดูกล้องได้ในไม่กี่แตะ</h2><button id="close-help" class="icon-button" aria-label="ปิดวิธีใช้งาน"><svg class="ico"><use href="#i-close"/></svg></button></div><p>ค้นหาชื่อถนน ทางแยก หรือรหัสกล้อง เช่น ccs03 แล้วกดดาวเพื่อเก็บกล้องที่ใช้บ่อยไว้ในเครื่องนี้</p><ul><li><strong>มือถือ:</strong> ปัดซ้าย–ขวาเพื่อเปลี่ยนกล้อง หรือเลือก “ทั้งหมด” เพื่อดูรายการ</li><li><strong>คอมพิวเตอร์:</strong> เลือกจำนวนจอ แล้วคลิกภาพเพื่อขยาย</li><li><strong>ภาพไม่ขึ้น:</strong> แตะภาพหากขึ้น “แตะเพื่อเล่น” หรือลองปุ่มเชื่อมต่อใหม่</li></ul><dl class="shortcuts"><div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>เปลี่ยนหน้า</dd></div><div><dt><kbd>Space</kbd></dt><dd>เปิด / ปิดวนอัตโนมัติ</dd></div><div><dt><kbd>F</kbd></dt><dd>เต็มจอ</dd></div><div><dt><kbd>Esc</kbd></dt><dd>กลับจากภาพขยาย</dd></div></dl><p class="help-note">“กำลังเล่น” หมายถึงตัวเล่นบนจอนี้กำลังเล่นวิดีโอ ภาพอาจล่าช้าจากเหตุการณ์จริง เว็บนี้ไม่มีภาพย้อนหลัง</p></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<noscript><div class="no-script">กรุณาเปิด JavaScript เพื่อดูกล้องจราจร หรือ <a href="https://sites.google.com/view/ccs-cctv">เปิดเว็บไซต์กล้องต้นทาง</a></div></noscript>
 </body>
 </html>
