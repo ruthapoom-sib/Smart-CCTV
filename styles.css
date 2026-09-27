@@ -129,10 +129,9 @@ input::-webkit-search-cancel-button { display: none; }
 .tile[data-state=live] .lamp { background: var(--green); }
 .tile[data-state=live] .camera-state { color: var(--accent); }
 .tile[data-state=connecting] .lamp, .tile[data-state=buffering] .lamp, .tile[data-state=blocked] .lamp { background: var(--amber); }
-.tile[data-state=connecting] .lamp { animation: pulse 1.4s ease-in-out infinite; }
 .tile[data-state=offline] .lamp, .tile[data-state=unsupported] .lamp { background: var(--red); }
 .tile[data-state=offline] .camera-state, .tile[data-state=unsupported] .camera-state { color: var(--red); }
-.tile[data-state=blocked] .msg, .tile[data-state=buffering] .msg { background: #080c10a6; color: var(--text); }
+.tile[data-state=blocked] .msg { background: #080c10a6; color: var(--text); }
 .tile[data-state=blocked] .camera-open { cursor: pointer; }
 .grid.has-focus { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .grid.has-focus .tile:not(.focused) { display: none; }
