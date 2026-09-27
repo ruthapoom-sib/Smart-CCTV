@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>กล้องจราจรฉะเชิงเทรา</title>
 <meta name="description" content="ภาพสดกล้อง CCTV จราจร 40 จุด ในเขตเทศบาลเมืองฉะเชิงเทรา">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='5' width='30' height='22' rx='5' fill='%230A6B47'/%3E%3Crect x='3.5' y='7.5' width='25' height='17' rx='3' fill='none' stroke='%23F6F6F1' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23F6F6F1'/%3E%3C/svg%3E">
@@ -48,6 +48,9 @@ body {
 #clock { color: var(--dim); }
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 button, select { font: inherit; font-size: 14px; color: inherit; background: var(--kerb); border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#prev, #next, #fs { padding-inline: 8px; }
 select { max-width: 17em; }
 .seg { display: inline-flex; padding: 2px; background: var(--kerb); border-radius: 6px; }
 .seg button { padding: 4px 10px; background: none; border-radius: 4px; }
@@ -116,6 +119,11 @@ select { max-width: 17em; }
 .tile[data-state="blocked"] .msg { background: rgb(0 0 0 / .55); color: var(--paint); font-size: 15px; font-weight: 600; }
 .msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
 @keyframes blink { 50% { opacity: .2; } }
+/* skeleton ระหว่างเชื่อมต่อ แทนจอดำ */
+.tile[data-state="connecting"] .screen { background: linear-gradient(100deg, #0E1113 30%, #1B1F23 50%, #0E1113 70%) 0 0 / 200% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+/* View Transitions: เปลี่ยน layout/หน้า/ขยายกล้องแบบนุ่มนวล */
+::view-transition-group(*) { animation-duration: .28s; }
 
 .grid.has-focus { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .grid.has-focus .tile:not(.focused) { display: none; }
@@ -136,7 +144,15 @@ select { max-width: 17em; }
 .grid.mall .screen { aspect-ratio: 16 / 9; }
 
 @media (max-width: 700px) {
-  body { height: auto; min-height: 100dvh; }
+  body { height: auto; min-height: 100dvh; padding-bottom: calc(60px + env(safe-area-inset-bottom)); } /* เว้นที่ให้แถบควบคุมด้านล่าง */
+  header.bar { gap: 8px 12px; padding-bottom: 8px; }
+  .brand h1 { font-size: 18px; }
+  .brand p { display: none; }
+  .status { margin-right: 0; }
+  #group { flex: 1 1 100%; max-width: none; }
+  /* ปุ่มควบคุมย้ายไปแถบล่างที่นิ้วโป้งกดถึง */
+  .controls { position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; flex-wrap: nowrap; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgb(21 24 27 / .92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid rgb(255 255 255 / .06); }
+  #interval { display: none; }
   .sizes [data-n="4"], .sizes [data-n="9"], .sizes [data-n="16"] { display: none; } /* มือถือเหลือ 1 จอ (ปัด) กับ ทั้งหมด */
 }
 @media (prefers-reduced-motion: reduce) {
@@ -147,6 +163,15 @@ select { max-width: 17em; }
 </style>
 </head>
 <body>
+<!-- ไอคอนแบบ Lucide (stroke 2px) ใช้ผ่าน <use href="#i-…"> -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></symbol>
+</svg>
 <header class="bar">
   <div class="brand">
     <h1>กล้องจราจรฉะเชิงเทรา</h1>
@@ -156,8 +181,8 @@ select { max-width: 17em; }
     <span class="live" id="live"><i></i><span>กำลังตรวจสอบสัญญาณ…</span></span>
     <time id="clock"></time>
   </div>
+  <select id="group" aria-label="เลือกทางแยก"></select>
   <div class="controls">
-    <select id="group" aria-label="เลือกทางแยก"></select>
     <div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า">
       <button type="button" data-n="1">1 จอ</button>
       <button type="button" data-n="4">4 จอ</button>
@@ -166,9 +191,9 @@ select { max-width: 17em; }
       <button type="button" data-n="all">ทั้งหมด</button>
     </div>
     <div class="seg" role="group" aria-label="เปลี่ยนหน้า">
-      <button type="button" id="prev" aria-label="หน้าก่อนหน้า">‹</button>
-      <button type="button" id="auto" aria-pressed="false">วนอัตโนมัติ</button>
-      <button type="button" id="next" aria-label="หน้าถัดไป">›</button>
+      <button type="button" id="prev" aria-label="ก่อนหน้า" title="ก่อนหน้า (←)"><svg class="ico"><use href="#i-left"/></svg></button>
+      <button type="button" id="auto" aria-pressed="false" title="วนอัตโนมัติ (Space)"><svg class="ico"><use href="#i-play"/></svg><span>วนอัตโนมัติ</span></button>
+      <button type="button" id="next" aria-label="ถัดไป" title="ถัดไป (→)"><svg class="ico"><use href="#i-right"/></svg></button>
     </div>
     <select id="interval" aria-label="เวลาต่อหน้า">
       <option value="10">ทุก 10 วินาที</option>
@@ -176,7 +201,7 @@ select { max-width: 17em; }
       <option value="30">ทุก 30 วินาที</option>
       <option value="60">ทุก 1 นาที</option>
     </select>
-    <button type="button" id="fs">เต็มจอ</button>
+    <button type="button" id="fs" aria-label="เต็มจอ" title="เต็มจอ (F)"><svg class="ico"><use href="#i-max"/></svg></button>
   </div>
 </header>
 <main id="grid" class="grid"></main>
@@ -387,6 +412,7 @@ function sync() {
   const shown = swiping() ? 1 : state.size; // มือถือโหมดปัด = ปุ่ม "1 จอ"
   document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === String(shown)));
   $('auto').setAttribute('aria-pressed', state.auto);
+  $('auto').querySelector('use').setAttribute('href', state.auto ? '#i-pause' : '#i-play');
   $('group').value = state.g;
   $('interval').value = state.interval;
   $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ'
@@ -396,12 +422,16 @@ function sync() {
 }
 
 $('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
-$('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); render(); };
+// เปลี่ยน layout/หน้า/ขยายกล้องแบบนุ่มนวลด้วย View Transitions ของเบราว์เซอร์ (ไม่รองรับหรือผู้ใช้ขอลดการเคลื่อนไหว = เปลี่ยนทันที)
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)');
+const transition = fn => (document.startViewTransition && !REDUCE.matches ? document.startViewTransition(fn) : fn());
+
+$('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); transition(render); };
 document.querySelectorAll('[data-n]').forEach(b => {
   b.onclick = () => {
     const size = b.dataset.n === 'all' ? 'all' : +b.dataset.n;
     if (size === state.size) return; // กดปุ่มที่เลือกอยู่แล้ว ไม่ต้องกลับหน้าแรกและเริ่มสตรีมใหม่
-    state.size = size; state.page = 0; save(); render();
+    state.size = size; state.page = 0; save(); transition(render);
   };
 });
 addEventListener('resize', () => { if (!swiping()) layout(); });
@@ -417,15 +447,20 @@ function go(step) {
   // กระโดดทันที ไม่ใช้ smooth: เลื่อนผ่านหลายกล้อง (เช่นวนจากกล้องแรกไปกล้องสุดท้าย) จะเปิด-ปิด player ทุกกล้องที่ผ่าน
   // และ IntersectionObserver จะเขียนเลขกล้องทับระหว่างเลื่อนถ้ากดรัวๆ
   if (swiping()) scrollToTile(grid.children[state.page]);
-  else render();
+  else transition(render);
   resetTimer();
 }
 
 function toggleFocus(tile) {
   const on = !tile.classList.contains('focused');
-  grid.querySelector('.focused')?.classList.remove('focused');
-  tile.classList.toggle('focused', on);
-  grid.classList.toggle('has-focus', on);
+  tile.style.viewTransitionName = 'cam'; // ให้ช่องนี้ขยาย/หดจากตำแหน่งเดิม แทนการ fade
+  const vt = transition(() => {
+    grid.querySelector('.focused')?.classList.remove('focused');
+    tile.classList.toggle('focused', on);
+    grid.classList.toggle('has-focus', on);
+  });
+  const clear = () => { tile.style.viewTransitionName = ''; };
+  vt?.finished ? vt.finished.finally(clear) : clear();
   resetTimer();
   sync();
 }
@@ -458,7 +493,11 @@ $('interval').onchange = e => { state.interval = +e.target.value; save(); resetT
 const fs = $('fs');
 fs.hidden = !document.fullscreenEnabled; // iOS Safari เปิดเต็มจอทั้งหน้าไม่ได้
 fs.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
-document.onfullscreenchange = () => { fs.textContent = document.fullscreenElement ? 'ออกจากเต็มจอ' : 'เต็มจอ'; };
+document.onfullscreenchange = () => {
+  const on = !!document.fullscreenElement;
+  fs.querySelector('use').setAttribute('href', on ? '#i-min' : '#i-max');
+  fs.setAttribute('aria-label', on ? 'ออกจากเต็มจอ' : 'เต็มจอ');
+};
 
 // คลิกเมาส์แล้วไม่ให้ปุ่ม/จอค้าง focus ไว้ ไม่งั้น Space/ลูกศรจะไปกดปุ่มนั้นแทนคีย์ลัด (ใช้ Tab จากคีย์บอร์ดได้ตามปกติ)
 document.addEventListener('mousedown', e => { if (e.target.closest('button, .tile')) e.preventDefault(); });
