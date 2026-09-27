@@ -117,6 +117,7 @@ select { max-width: 17em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
 }
+.test.env { top: auto; bottom: 8px; right: 8px; white-space: pre-wrap; }
 .test { position: fixed; z-index: 9; top: 8px; left: 8px; margin: 0; padding: 12px 16px; background: #000; color: #fff; border: 1px solid #F2B705; font: 13px/1.6 ui-monospace, monospace; }
 </style>
 </head>
@@ -192,6 +193,15 @@ const chunk = (list, size) => {
 const wrap = (i, len) => ((i % len) + len) % len;
 const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
 const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
+// iPhone/iPad ใช้ HLS ในตัวของ iOS ก่อน: iOS เก่า (ไม่มี MediaSource) ใช้ทางนี้อยู่แล้วและเล่นได้
+// ส่วน hls.js บน ManagedMediaSource ของ iOS 27 ค้างที่ "กำลังเชื่อมต่อ"
+// ที่อื่นใช้ hls.js ก่อน เพราะ Chrome บอกว่าเล่น m3u8 ได้ แต่เล่นสตรีม TS นี้ไม่ได้จริง
+const pickPlayer = ({ ua, touch, hls, native, force }) => {
+  if (force) return force;
+  const apple = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+  if (apple && native) return 'native';
+  return hls ? 'hls' : native ? 'native' : 'none';
+};
 // หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h
 const fit = (n, w, h) => {
   let best = [1, n], bestW = 0;
@@ -205,6 +215,14 @@ const fit = (n, w, h) => {
 
 // ── player ──
 const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', blocked: 'แตะเพื่อเล่นภาพสด', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
+
+const PLAYER = pickPlayer({
+  ua: navigator.userAgent,
+  touch: navigator.maxTouchPoints || 0,
+  hls: !!window.Hls?.isSupported(),
+  native: !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl'),
+  force: ['hls', 'native'].find(p => p === new URLSearchParams(location.search).get('player')), // ทดสอบบนเครื่องจริง: ?player=hls หรือ ?player=native
+});
 
 function play(tile, cam) {
   const video = tile.querySelector('video');
@@ -226,7 +244,7 @@ function play(tile, cam) {
 
   function start() {
     set('connecting');
-    if (window.Hls?.isSupported()) {
+    if (PLAYER === 'hls') {
       let recovered = false;
       hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
       hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
@@ -238,7 +256,7 @@ function play(tile, cam) {
       });
       hls.loadSource(SRC(cam.id));
       hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // iOS Safari
+    } else if (PLAYER === 'native') { // iPhone/iPad
       video.onerror = offline;
       video.src = SRC(cam.id);
       tryPlay();
@@ -415,9 +433,21 @@ if (location.hash === '#test') {
     ['ทั้งหมด 3 จอบนจอ 16:9 ใช้ 2×2 เพราะภาพใหญ่กว่าเรียงแถวเดียว', eq(fit(3, 1408, 790), [2, 2])],
     ['ทั้งหมด 3 จอบนจอกว้างมากเรียงแถวเดียว', eq(fit(3, 2560, 480), [3, 1])],
     ['ทั้งหมด 1 จอ', eq(fit(1, 1408, 790), [1, 1])],
+    ['iPhone iOS ใหม่ใช้ HLS ในตัวแม้ hls.js รองรับ', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1', touch: 5, hls: true, native: true }) === 'native'],
+    ['iPad (UA แบบ Mac + จอสัมผัส) ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 5, hls: true, native: true }) === 'native'],
+    ['Mac Safari ใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 0, hls: true, native: true }) === 'hls'],
+    ['Chrome ที่บอกว่าเล่น m3u8 ได้ยังใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0 Safari/537.36', touch: 0, hls: true, native: true }) === 'hls'],
+    ['iPhone เก่าไม่มี hls.js ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X)', touch: 5, hls: false, native: true }) === 'native'],
+    ['?player=hls บังคับใช้ hls.js บน iPhone', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)', touch: 5, hls: true, native: true, force: 'hls' }) === 'hls'],
+    ['ไม่มีทางเล่นเลย', pickPlayer({ ua: 'x', touch: 0, hls: false, native: false }) === 'none'],
   ];
   document.title = checks.every(([, ok]) => ok) ? 'TEST PASS' : 'TEST FAIL';
   document.body.insertAdjacentHTML('afterbegin', `<pre class="test">${checks.map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join('\n')}</pre>`);
+  // ข้อมูลเครื่องสำหรับไล่ปัญหาบนมือถือจริง (ใช้ textContent เพราะ UA มาจากภายนอก)
+  const env = document.createElement('pre');
+  env.className = 'test env';
+  env.textContent = `player=${PLAYER} hls.js=${!!window.Hls?.isSupported()} MMS=${'ManagedMediaSource' in window} MSE=${'MediaSource' in window} secure=${isSecureContext}\n${navigator.userAgent}`;
+  document.body.append(env);
 }
 </script>
 </body>
