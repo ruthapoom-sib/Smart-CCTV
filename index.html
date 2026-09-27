@@ -130,9 +130,14 @@ select { max-width: 17em; }
 .grid.swipe .sign .name { font-size: 17px; white-space: normal; }
 .grid.swipe .sign .grp { display: block; font-size: 14px; white-space: normal; }
 
+/* มือถือ "ทั้งหมด": ตาราง 2 คอลัมน์ เลื่อนขึ้นลงดูครบทุกกล้อง */
+.grid.mall { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; }
+.grid.mall .tile { grid-template-rows: auto auto; cursor: pointer; }
+.grid.mall .screen { aspect-ratio: 16 / 9; }
+
 @media (max-width: 700px) {
   body { height: auto; min-height: 100dvh; }
-  .sizes { display: none; }
+  .sizes [data-n="4"], .sizes [data-n="9"], .sizes [data-n="16"] { display: none; } /* มือถือเหลือ 1 จอ (ปัด) กับ ทั้งหมด */
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
@@ -328,7 +333,11 @@ function tileFor(cam, autoplay) {
   tile.querySelector('.name').textContent = cam.name;
   tile.querySelector('.grp').textContent = cam.group;
   tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
-  tile.onclick = () => { if (tile.dataset.state !== 'blocked' && !swiping()) toggleFocus(tile); }; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
+  tile.onclick = () => {
+    if (tile.dataset.state === 'blocked') return; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
+    if (grid.classList.contains('mall')) { state.size = 1; state.page = camsFor(state.g).indexOf(cam); save(); render(); } // มือถือ: แตะจากตารางเพื่อดูทีละกล้อง
+    else if (!swiping()) toggleFocus(tile);
+  };
   tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tile.click(); } };
   if (autoplay) cleanups.push(play(tile, cam));
   return tile;
@@ -338,27 +347,32 @@ function render() {
   cleanups.forEach(stop => stop());
   cleanups = [];
   const list = camsFor(state.g);
-  const swipe = SWIPE.matches;
-  const pages = swipe || state.size === 'all' ? [list] : chunk(list, state.size);
+  const mobile = SWIPE.matches;
+  const swipe = mobile && state.size !== 'all', mall = mobile && state.size === 'all';
+  const pages = mobile || state.size === 'all' ? [list] : chunk(list, state.size);
   pageCount = swipe ? list.length : pages.length; // ปัดทีละกล้อง: 1 กล้อง = 1 หน้า สำหรับ ‹ › และวนอัตโนมัติ
   state.page = wrap(state.page, pageCount);
   grid.classList.remove('has-focus');
   grid.classList.toggle('swipe', swipe);
-  grid.replaceChildren(...(swipe ? list : pages[state.page]).map(cam => tileFor(cam, !swipe)));
-  if (swipe) watchSwipe(); else layout();
+  grid.classList.toggle('mall', mall);
+  grid.replaceChildren(...(mobile ? list : pages[state.page]).map(cam => tileFor(cam, !mobile)));
+  if (swipe) scrollToTile(watchVisible(grid, i => { state.page = i; sync(); resetTimer(); })[state.page]);
+  else if (mall) watchVisible(null);
+  else layout();
   sync();
 }
 
-// เล่นเฉพาะกล้องที่อยู่บนจอ: iPhone ถอดรหัสพร้อมกันได้จำกัด และไม่เปลืองเน็ตกับกล้องที่ยังไม่ได้ดู
-function watchSwipe() {
+// มือถือเล่นเฉพาะกล้องที่อยู่บนจอ: iPhone ถอดรหัสพร้อมกันได้จำกัด และไม่เปลืองเน็ตกับกล้องที่ยังไม่ได้ดู
+// root = grid (ปัดซ้าย-ขวา) หรือ null (ตาราง "ทั้งหมด" ที่เลื่อนทั้งหน้า)
+function watchVisible(root, onShow) {
   const tiles = [...grid.children];
   const io = new IntersectionObserver(entries => entries.forEach(({ target: t, isIntersecting }) => {
-    if (isIntersecting && !t.stop) { t.stop = play(t, t.cam); state.page = tiles.indexOf(t); sync(); resetTimer(); }
-    else if (!isIntersecting && t.stop) { t.stop(); t.stop = null; }
-  }), { root: grid, threshold: 0.6 });
+    if (isIntersecting && !t.stop) { t.stop = play(t, t.cam); onShow?.(tiles.indexOf(t)); }
+    else if (!isIntersecting && t.stop) { t.stop(); t.stop = null; t.dataset.state = 'connecting'; t.querySelector('.msg').textContent = ''; } // หยุดแล้วไม่ควรขึ้นไฟเขียว
+  }), { root, threshold: root ? 0.6 : 0.5 });
   tiles.forEach(t => io.observe(t));
   cleanups.push(() => { io.disconnect(); tiles.forEach(t => t.stop?.()); });
-  scrollToTile(tiles[state.page]);
+  return tiles;
 }
 
 // "ทั้งหมด" คำนวณคอลัมน์ตามขนาดจอจริง ส่วน 4/9/16 เป็นตารางจัตุรัส
@@ -370,12 +384,14 @@ function layout() {
 }
 
 function sync() {
-  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === String(state.size)));
+  const shown = swiping() ? 1 : state.size; // มือถือโหมดปัด = ปุ่ม "1 จอ"
+  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === String(shown)));
   $('auto').setAttribute('aria-pressed', state.auto);
   $('group').value = state.g;
   $('interval').value = state.interval;
   $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ'
     : swiping() ? `กล้อง ${state.page + 1} / ${pageCount} ปัดเพื่อดูกล้องถัดไป`
+    : grid.classList.contains('mall') ? `ทั้งหมด ${grid.children.length} กล้อง แตะเพื่อดูทีละกล้อง`
     : `หน้า ${state.page + 1} จาก ${pageCount}`;
 }
 
