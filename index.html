@@ -117,6 +117,7 @@ select { max-width: 17em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
 }
+.test.env { top: auto; bottom: 8px; right: 8px; white-space: pre-wrap; }
 .test { position: fixed; z-index: 9; top: 8px; left: 8px; margin: 0; padding: 12px 16px; background: #000; color: #fff; border: 1px solid #F2B705; font: 13px/1.6 ui-monospace, monospace; }
 </style>
 </head>
@@ -133,6 +134,7 @@ select { max-width: 17em; }
   <div class="controls">
     <select id="group" aria-label="เลือกทางแยก"></select>
     <div class="seg" role="group" aria-label="จำนวนจอต่อหน้า">
+      <button type="button" data-n="1">1 จอ</button>
       <button type="button" data-n="4">4 จอ</button>
       <button type="button" data-n="9">9 จอ</button>
       <button type="button" data-n="16">16 จอ</button>
@@ -192,6 +194,17 @@ const chunk = (list, size) => {
 const wrap = (i, len) => ((i % len) + len) % len;
 const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
 const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
+// iPhone/iPad ใช้ HLS ในตัวของ iOS ก่อน: iOS เก่า (ไม่มี MediaSource) ใช้ทางนี้อยู่แล้วและเล่นได้
+// ส่วน hls.js บน ManagedMediaSource ของ iOS 27 ค้างที่ "กำลังเชื่อมต่อ"
+// ที่อื่นใช้ hls.js ก่อน เพราะ Chrome บอกว่าเล่น m3u8 ได้ แต่เล่นสตรีม TS นี้ไม่ได้จริง
+const pickPlayer = ({ ua, touch, hls, native, force }) => {
+  if (force) return force;
+  const apple = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
+  if (apple && native) return 'native';
+  return hls ? 'hls' : native ? 'native' : 'none';
+};
+// เบราว์เซอร์ในตัว Smart TV (Samsung Tizen, LG webOS ฯลฯ) ถอดรหัสวิดีโอได้ทีละภาพ จึงเปิดมาเป็น 1 จอ
+const isTV = ua => /Tizen|Web0S|webOS|SMART-TV|SmartTV|HbbTV|NetCast|BRAVIA/i.test(ua);
 // หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h
 const fit = (n, w, h) => {
   let best = [1, n], bestW = 0;
@@ -206,9 +219,17 @@ const fit = (n, w, h) => {
 // ── player ──
 const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', blocked: 'แตะเพื่อเล่นภาพสด', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
 
+const PLAYER = pickPlayer({
+  ua: navigator.userAgent,
+  touch: navigator.maxTouchPoints || 0,
+  hls: !!window.Hls?.isSupported(),
+  native: !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl'),
+  force: ['hls', 'native'].find(p => p === new URLSearchParams(location.search).get('player')), // ทดสอบบนเครื่องจริง: ?player=hls หรือ ?player=native
+});
+
 function play(tile, cam) {
   const video = tile.querySelector('video');
-  let hls = null, fails = 0, timer;
+  let hls = null, fails = 0, timer, lastT = -1, still = 0;
   video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
   const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
   // ไม่ใช้ attribute autoplay เพราะ iOS (เช่นโหมดประหยัดพลังงาน) ข้ามไปเงียบๆ; เรียก play() เองจะได้รู้ว่าโดนบล็อก
@@ -226,7 +247,7 @@ function play(tile, cam) {
 
   function start() {
     set('connecting');
-    if (window.Hls?.isSupported()) {
+    if (PLAYER === 'hls') {
       let recovered = false;
       hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
       hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
@@ -238,7 +259,7 @@ function play(tile, cam) {
       });
       hls.loadSource(SRC(cam.id));
       hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // iOS Safari
+    } else if (PLAYER === 'native') { // iPhone/iPad
       video.onerror = offline;
       video.src = SRC(cam.id);
       tryPlay();
@@ -248,24 +269,31 @@ function play(tile, cam) {
   }
 
   video.onplaying = () => { fails = 0; set('live'); };
+  video.onended = () => { set('connecting'); retry(3000); };
+  // ภาพค้างไม่มี error ให้จับ (กล้องดับแต่ server ยังเสิร์ฟ playlist เดิม): live แต่เวลาไม่เดิน 15 s ให้ต่อใหม่
+  const watchdog = setInterval(() => {
+    if (tile.dataset.state !== 'live' || video.paused || document.hidden) { still = 0; return; }
+    if (video.currentTime !== lastT) { lastT = video.currentTime; still = 0; }
+    else if (++still >= 3) { still = 0; set('connecting'); retry(0); }
+  }, 5000);
   start();
-  return stop;
+  return () => { clearInterval(watchdog); stop(); };
 }
 
 // ── ui ──
 const $ = id => document.getElementById(id);
 const grid = $('grid'), tpl = $('tile-tpl');
 const INTERVALS = [10, 15, 30, 60];
-const SIZES = [4, 9, 16, 'all'];
+const SIZES = [1, 4, 9, 16, 'all'];
 const saved = (() => { try { return JSON.parse(localStorage.getItem('cctv')) || {}; } catch { return {}; } })();
 const state = {
-  size: SIZES.includes(saved.size) ? saved.size : 9,
+  size: isTV(navigator.userAgent) ? 1 : SIZES.includes(saved.size) ? saved.size : 9, // ทีวีเริ่มที่ 1 จอเสมอ แม้เคยเลือกไว้มากกว่านั้น
   interval: INTERVALS.includes(saved.interval) ? saved.interval : 15,
   auto: false, // วนเฉพาะเมื่อผู้ใช้กดเอง และไม่จำค่านี้
   g: Number.isInteger(saved.g) && saved.g >= -1 && saved.g < GROUPS.length ? saved.g : -1,
   page: 0,
 };
-const save = () => localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g }));
+const save = () => { try { localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g })); } catch {} }; // เบราว์เซอร์บล็อก storage: ไม่จำค่า แต่ปุ่มยังทำงาน
 let cleanups = [], pageCount = 1;
 
 function tileFor(cam) {
@@ -312,7 +340,13 @@ function sync() {
 
 $('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
 $('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); render(); };
-document.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => { state.size = b.dataset.n === 'all' ? 'all' : +b.dataset.n; state.page = 0; save(); render(); }; });
+document.querySelectorAll('[data-n]').forEach(b => {
+  b.onclick = () => {
+    const size = b.dataset.n === 'all' ? 'all' : +b.dataset.n;
+    if (size === state.size) return; // กดปุ่มที่เลือกอยู่แล้ว ไม่ต้องกลับหน้าแรกและเริ่มสตรีมใหม่
+    state.size = size; state.page = 0; save(); render();
+  };
+});
 addEventListener('resize', layout);
 
 // ── tour ──
@@ -365,10 +399,13 @@ fs.hidden = !document.fullscreenEnabled; // iOS Safari เปิดเต็ม�
 fs.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
 document.onfullscreenchange = () => { fs.textContent = document.fullscreenElement ? 'ออกจากเต็มจอ' : 'เต็มจอ'; };
 
+// คลิกเมาส์แล้วไม่ให้ปุ่ม/จอค้าง focus ไว้ ไม่งั้น Space/ลูกศรจะไปกดปุ่มนั้นแทนคีย์ลัด (ใช้ Tab จากคีย์บอร์ดได้ตามปกติ)
+document.addEventListener('mousedown', e => { if (e.target.closest('button, .tile')) e.preventDefault(); });
+
 document.addEventListener('keydown', e => {
-  if (e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.repeat || e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
   const onControl = e.target.closest('button, [role="button"]'); // ปุ่มจัดการ Space/Enter เองอยู่แล้ว
-  if (e.code === 'Space' && !onControl) { e.preventDefault(); $('auto').click(); }
+  if ((e.code === 'Space' && !onControl) || e.key === 'MediaPlayPause') { e.preventDefault(); $('auto').click(); } // MediaPlayPause = ปุ่ม ▶❚❚ บนรีโมททีวี
   else if (e.key === 'ArrowRight') go(1);
   else if (e.key === 'ArrowLeft') go(-1);
   else if (e.code === 'KeyF' && !fs.hidden) fs.click(); // ใช้ e.code เพื่อให้ใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย
@@ -399,9 +436,25 @@ if (location.hash === '#test') {
     ['ทั้งหมด 3 จอบนจอ 16:9 ใช้ 2×2 เพราะภาพใหญ่กว่าเรียงแถวเดียว', eq(fit(3, 1408, 790), [2, 2])],
     ['ทั้งหมด 3 จอบนจอกว้างมากเรียงแถวเดียว', eq(fit(3, 2560, 480), [3, 1])],
     ['ทั้งหมด 1 จอ', eq(fit(1, 1408, 790), [1, 1])],
+    ['iPhone iOS ใหม่ใช้ HLS ในตัวแม้ hls.js รองรับ', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1', touch: 5, hls: true, native: true }) === 'native'],
+    ['iPad (UA แบบ Mac + จอสัมผัส) ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 5, hls: true, native: true }) === 'native'],
+    ['Mac Safari ใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 0, hls: true, native: true }) === 'hls'],
+    ['Chrome ที่บอกว่าเล่น m3u8 ได้ยังใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/154.0 Safari/537.36', touch: 0, hls: true, native: true }) === 'hls'],
+    ['iPhone เก่าไม่มี hls.js ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_7 like Mac OS X)', touch: 5, hls: false, native: true }) === 'native'],
+    ['?player=hls บังคับใช้ hls.js บน iPhone', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)', touch: 5, hls: true, native: true, force: 'hls' }) === 'hls'],
+    ['ไม่มีทางเล่นเลย', pickPlayer({ ua: 'x', touch: 0, hls: false, native: false }) === 'none'],
+    ['Samsung Tizen เป็นทีวี', isTV('Mozilla/5.0 (SMART-TV; LINUX; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) 94.0.4606.31/7.0 TV Safari/537.36')],
+    ['LG webOS เป็นทีวี', isTV('Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36 WebAppManager')],
+    ['Chrome บนคอมไม่ใช่ทีวี', !isTV('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36')],
+    ['iPhone ไม่ใช่ทีวี', !isTV('Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1')],
   ];
   document.title = checks.every(([, ok]) => ok) ? 'TEST PASS' : 'TEST FAIL';
   document.body.insertAdjacentHTML('afterbegin', `<pre class="test">${checks.map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join('\n')}</pre>`);
+  // ข้อมูลเครื่องสำหรับไล่ปัญหาบนมือถือจริง (ใช้ textContent เพราะ UA มาจากภายนอก)
+  const env = document.createElement('pre');
+  env.className = 'test env';
+  env.textContent = `player=${PLAYER} hls.js=${!!window.Hls?.isSupported()} MMS=${'ManagedMediaSource' in window} MSE=${'MediaSource' in window} secure=${isSecureContext}\n${navigator.userAgent}`;
+  document.body.append(env);
 }
 </script>
 </body>
