@@ -48,10 +48,11 @@ select { max-width: 17em; }
 :focus-visible { outline: 2px solid var(--lane); outline-offset: 2px; }
 
 .grid {
-  --n: 3;
+  --cols: 3;
+  --rows: 3;
   display: grid;
-  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-  grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
   gap: 6px;
   padding: 0 16px;
 }
@@ -75,7 +76,16 @@ select { max-width: 17em; }
   .sign .name { font-size: 12.5px; }
   .sign .grp { font-size: 11px; }
 }
-@container (max-width: 300px) { .sign .grp { display: none; } }
+@container (max-width: 300px) {
+  .sign .grp { display: none; }
+  .tile .msg { padding: 6px 6px 40px; font-size: 12px; }
+}
+@container (max-width: 220px) {
+  .sign { left: 4px; bottom: 4px; max-width: calc(100% - 8px); padding: 3px 7px 3px 3px; column-gap: 5px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--sign), inset 0 0 0 2.5px var(--paint); }
+  .sign .id { padding: 0 4px; font-size: 10.5px; }
+  .sign .name { font-size: 11px; }
+  .lamp { top: 6px; right: 6px; width: 8px; height: 8px; }
+}
 
 .foot { gap: 16px; font-size: 13px; color: var(--dim); }
 .foot a { color: var(--paint); }
@@ -90,6 +100,8 @@ select { max-width: 17em; }
 .tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 3px rgb(0 0 0 / .55), 0 0 10px var(--go); }
 .tile[data-state="offline"] .lamp, .tile[data-state="unsupported"] .lamp { background: var(--stop); }
 .tile[data-state="offline"], .tile[data-state="unsupported"] { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
+.tile[data-state="blocked"] { cursor: pointer; }
+.tile[data-state="blocked"] .msg { background: rgb(0 0 0 / .55); color: var(--paint); font-size: 15px; font-weight: 600; }
 .msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
 @keyframes blink { 50% { opacity: .2; } }
 
@@ -121,13 +133,14 @@ select { max-width: 17em; }
   <div class="controls">
     <select id="group" aria-label="เลือกทางแยก"></select>
     <div class="seg" role="group" aria-label="จำนวนจอต่อหน้า">
-      <button type="button" data-n="2">4 จอ</button>
-      <button type="button" data-n="3">9 จอ</button>
-      <button type="button" data-n="4">16 จอ</button>
+      <button type="button" data-n="4">4 จอ</button>
+      <button type="button" data-n="9">9 จอ</button>
+      <button type="button" data-n="16">16 จอ</button>
+      <button type="button" data-n="all">ทั้งหมด</button>
     </div>
     <div class="seg" role="group" aria-label="เปลี่ยนหน้า">
       <button type="button" id="prev" aria-label="หน้าก่อนหน้า">‹</button>
-      <button type="button" id="auto" aria-pressed="true">วนอัตโนมัติ</button>
+      <button type="button" id="auto" aria-pressed="false">วนอัตโนมัติ</button>
       <button type="button" id="next" aria-label="หน้าถัดไป">›</button>
     </div>
     <select id="interval" aria-label="เวลาต่อหน้า">
@@ -147,7 +160,7 @@ select { max-width: 17em; }
 </footer>
 <template id="tile-tpl">
   <figure class="tile" role="button" tabindex="0" data-state="connecting">
-    <video muted autoplay playsinline></video>
+    <video muted playsinline></video>
     <span class="lamp" aria-hidden="true"></span>
     <p class="msg"></p>
     <figcaption class="sign"><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
@@ -179,15 +192,27 @@ const chunk = (list, size) => {
 const wrap = (i, len) => ((i % len) + len) % len;
 const uniqueById = list => list.filter((c, i) => list.findIndex(d => d.id === c.id) === i); // ponytail: O(n²) พอสำหรับ 42 แถว ถ้ากล้องมีเป็นหลักพันให้เปลี่ยนไปใช้ Set ของ id
 const camsFor = g => (g < 0 ? uniqueById(CAMS) : CAMS.filter(c => c.g === g));
+// หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h
+const fit = (n, w, h) => {
+  let best = [1, n], bestW = 0;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const tileW = Math.min(w / cols, (h / rows) * 16 / 9);
+    if (tileW > bestW) { bestW = tileW; best = [cols, rows]; }
+  }
+  return best;
+};
 
 // ── player ──
-const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
+const MSG = { connecting: 'กำลังเชื่อมต่อ…', live: '', blocked: 'แตะเพื่อเล่นภาพสด', offline: 'ไม่มีสัญญาณ จะลองเชื่อมต่อใหม่อัตโนมัติ', unsupported: 'เบราว์เซอร์นี้เล่นวิดีโอสดไม่ได้' };
 
 function play(tile, cam) {
   const video = tile.querySelector('video');
   let hls = null, fails = 0, timer;
   video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
   const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
+  // ไม่ใช้ attribute autoplay เพราะ iOS (เช่นโหมดประหยัดพลังงาน) ข้ามไปเงียบๆ; เรียก play() เองจะได้รู้ว่าโดนบล็อก
+  const tryPlay = () => video.play().catch(e => { if (e.name === 'NotAllowedError') set('blocked'); });
   const stop = () => {
     clearTimeout(timer);
     hls?.destroy();
@@ -204,7 +229,7 @@ function play(tile, cam) {
     if (window.Hls?.isSupported()) {
       let recovered = false;
       hls = new Hls({ backBufferLength: 30 }); // จำกัด buffer ย้อนหลัง เพราะจอ wall เปิดทิ้งไว้ทั้งวัน
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (!d.fatal) return;
         if (d.type === Hls.ErrorTypes.MEDIA_ERROR && !recovered) { recovered = true; hls.recoverMediaError(); }
@@ -216,6 +241,7 @@ function play(tile, cam) {
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // iOS Safari
       video.onerror = offline;
       video.src = SRC(cam.id);
+      tryPlay();
     } else {
       set('unsupported');
     }
@@ -230,15 +256,16 @@ function play(tile, cam) {
 const $ = id => document.getElementById(id);
 const grid = $('grid'), tpl = $('tile-tpl');
 const INTERVALS = [10, 15, 30, 60];
+const SIZES = [4, 9, 16, 'all'];
 const saved = (() => { try { return JSON.parse(localStorage.getItem('cctv')) || {}; } catch { return {}; } })();
 const state = {
-  n: [2, 3, 4].includes(saved.n) ? saved.n : 3,
+  size: SIZES.includes(saved.size) ? saved.size : 9,
   interval: INTERVALS.includes(saved.interval) ? saved.interval : 15,
-  auto: saved.auto !== false,
+  auto: false, // วนเฉพาะเมื่อผู้ใช้กดเอง และไม่จำค่านี้
   g: Number.isInteger(saved.g) && saved.g >= -1 && saved.g < GROUPS.length ? saved.g : -1,
   page: 0,
 };
-const save = () => localStorage.setItem('cctv', JSON.stringify({ n: state.n, interval: state.interval, auto: state.auto, g: state.g }));
+const save = () => localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g }));
 let cleanups = [], pageCount = 1;
 
 function tileFor(cam) {
@@ -247,8 +274,8 @@ function tileFor(cam) {
   tile.querySelector('.name').textContent = cam.name;
   tile.querySelector('.grp').textContent = cam.group;
   tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
-  tile.onclick = () => toggleFocus(tile);
-  tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFocus(tile); } };
+  tile.onclick = () => { if (tile.dataset.state !== 'blocked') toggleFocus(tile); }; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
+  tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tile.click(); } };
   cleanups.push(play(tile, cam));
   return tile;
 }
@@ -256,17 +283,27 @@ function tileFor(cam) {
 function render() {
   cleanups.forEach(stop => stop());
   cleanups = [];
-  const pages = chunk(camsFor(state.g), state.n * state.n);
+  const list = camsFor(state.g);
+  const pages = state.size === 'all' ? [list] : chunk(list, state.size);
   pageCount = pages.length;
   state.page = wrap(state.page, pageCount);
   grid.classList.remove('has-focus');
-  grid.style.setProperty('--n', state.n);
   grid.replaceChildren(...pages[state.page].map(tileFor));
+  layout();
   sync();
 }
 
+// "ทั้งหมด" คำนวณคอลัมน์ตามขนาดจอจริง ส่วน 4/9/16 เป็นตารางจัตุรัส
+function layout() {
+  const [cols, rows] = state.size === 'all'
+    ? fit(grid.children.length, grid.clientWidth - 32, grid.clientHeight)
+    : [Math.sqrt(state.size), Math.sqrt(state.size)];
+  grid.style.setProperty('--cols', cols);
+  grid.style.setProperty('--rows', rows);
+}
+
 function sync() {
-  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.n === state.n));
+  document.querySelectorAll('[data-n]').forEach(b => b.setAttribute('aria-pressed', b.dataset.n === String(state.size)));
   $('auto').setAttribute('aria-pressed', state.auto);
   $('group').value = state.g;
   $('interval').value = state.interval;
@@ -275,7 +312,8 @@ function sync() {
 
 $('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
 $('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); render(); };
-document.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => { state.n = +b.dataset.n; state.page = 0; save(); render(); }; });
+document.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => { state.size = b.dataset.n === 'all' ? 'all' : +b.dataset.n; state.page = 0; save(); render(); }; });
+addEventListener('resize', layout);
 
 // ── tour ──
 let due = 0;
@@ -299,7 +337,7 @@ function toggleFocus(tile) {
 
 function tick() {
   $('clock').textContent = new Date().toLocaleTimeString('th-TH', { hour12: false });
-  const running = state.auto && !grid.classList.contains('has-focus');
+  const running = state.auto && pageCount > 1 && !grid.classList.contains('has-focus');
   if (!running) resetTimer();
   const left = due - Date.now();
   $('progress').style.width = running ? `${Math.min(100, 100 - left / (state.interval * 10))}%` : '0%';
@@ -314,7 +352,12 @@ async function probe() {
 
 $('prev').onclick = () => go(-1);
 $('next').onclick = () => go(1);
-$('auto').onclick = () => { state.auto = !state.auto; save(); sync(); };
+$('auto').onclick = () => { state.auto = !state.auto; sync(); };
+
+// แตะครั้งเดียวเริ่มทุกจอที่เบราว์เซอร์บล็อกไว้ ต้องเรียก play() ระหว่างที่ผู้ใช้แตะอยู่ถึงจะผ่าน
+document.addEventListener('click', () => {
+  grid.querySelectorAll('.tile[data-state="blocked"] video').forEach(v => v.play().catch(() => {}));
+}, true);
 $('interval').onchange = e => { state.interval = +e.target.value; save(); resetTimer(); };
 
 const fs = $('fs');
@@ -352,6 +395,10 @@ if (location.hash === '#test') {
     ['ตัวซ้ำเก็บกลุ่มแรกที่เจอ', camsFor(-1).find(c => c.id === '13').g === 4],
     ['กรองทางแยกแล้วตัวซ้ำยังอยู่', camsFor(5).length === 4],
     ['ทุกทางแยกมีกล้อง', GROUPS.every((_, g) => camsFor(g).length > 0)],
+    ['ทั้งหมด 40 จอบนจอ 16:9 ได้ 7×6', eq(fit(40, 1408, 790), [7, 6])],
+    ['ทั้งหมด 3 จอบนจอ 16:9 ใช้ 2×2 เพราะภาพใหญ่กว่าเรียงแถวเดียว', eq(fit(3, 1408, 790), [2, 2])],
+    ['ทั้งหมด 3 จอบนจอกว้างมากเรียงแถวเดียว', eq(fit(3, 2560, 480), [3, 1])],
+    ['ทั้งหมด 1 จอ', eq(fit(1, 1408, 790), [1, 1])],
   ];
   document.title = checks.every(([, ok]) => ok) ? 'TEST PASS' : 'TEST FAIL';
   document.body.insertAdjacentHTML('afterbegin', `<pre class="test">${checks.map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join('\n')}</pre>`);
