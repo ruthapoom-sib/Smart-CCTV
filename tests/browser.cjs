@@ -20,6 +20,17 @@ const fs = require('node:fs');
     await page.goto(url); await page.locator('.tile').first().waitFor();
     check('default layout has 4 unique cameras', await page.locator('.tile').count() === 4);
     check('automatic tour is off by default', await page.locator('#auto').getAttribute('aria-pressed') === 'false');
+    const buffering = await page.locator('.tile').first().evaluate(tile => {
+      const video = tile.querySelector('video');
+      video.dispatchEvent(new Event('playing'));
+      video.dispatchEvent(new Event('waiting'));
+      const msg = tile.querySelector('.msg');
+      return { state: tile.dataset.state, text: msg.textContent, background: getComputedStyle(msg).backgroundColor,
+        label: tile.querySelector('.state-label').textContent,
+        captionBelow: tile.querySelector('.caption').getBoundingClientRect().top >= tile.querySelector('.screen').getBoundingClientRect().bottom };
+    });
+    check('buffering leaves footage unobscured with status below the image', buffering.state === 'buffering' && buffering.text === '' && buffering.background === 'rgba(0, 0, 0, 0)' && buffering.label === 'รอภาพ' && buffering.captionBelow);
+    await page.reload(); await page.locator('.tile').first().waitFor();
     await page.fill('#search', 'ccs03');
     await page.waitForFunction(() => document.querySelectorAll('.tile').length === 1);
     check('search by camera ID', await page.locator('.tile').getAttribute('data-id') === '03');
