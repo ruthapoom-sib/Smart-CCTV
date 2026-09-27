@@ -56,35 +56,38 @@ select { max-width: 17em; }
   gap: 6px;
   padding: 0 16px;
 }
-.tile { position: relative; overflow: hidden; background: #000; border-radius: 4px; cursor: zoom-in; container-type: inline-size; }
+/* ช่องกล้อง = ภาพด้านบน + แถบป้ายบอกทางด้านล่าง ไม่มีอะไรทับภาพ */
+.tile { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; background: var(--sign); border-radius: 6px; cursor: zoom-in; container-type: inline-size; }
+.screen { position: relative; min-height: 0; background: #000; }
 .tile video { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-/* ป้ายบอกทางสีเขียว มีเส้นขอบขาวด้านใน */
+/* แถบป้ายบอกทาง: พื้นเขียว มีเส้นขอบขาวด้านใน */
 .sign {
-  position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px);
-  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center;
-  padding: 7px 12px 7px 7px;
-  background: var(--sign); color: var(--paint); border-radius: 7px;
-  box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3.5px var(--paint), 0 2px 10px rgb(0 0 0 / .45);
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; align-items: center;
+  padding: 6px 12px 7px;
+  color: var(--paint);
+  border-radius: 0 0 6px 6px;
+  box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3.5px var(--paint);
 }
-.sign .id { grid-row: span 2; padding: 1px 6px; background: var(--paint); color: var(--sign); border-radius: 4px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sign .lamp, .sign .id { grid-row: span 2; }
+.sign .id { padding: 1px 6px; background: var(--paint); color: var(--sign); border-radius: 4px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .sign .name, .sign .grp { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.35; }
 .sign .name { font-size: 14px; font-weight: 600; }
 .sign .grp { font-size: 12px; opacity: .85; }
 @container (max-width: 420px) {
-  .sign { left: 6px; bottom: 6px; max-width: calc(100% - 12px); padding: 5px 10px 5px 5px; column-gap: 6px; }
+  .sign { padding: 4px 9px 5px; column-gap: 6px; }
   .sign .name { font-size: 12.5px; }
   .sign .grp { font-size: 11px; }
 }
 @container (max-width: 300px) {
   .sign .grp { display: none; }
-  .tile .msg { padding: 6px 6px 40px; font-size: 12px; }
+  .tile .msg { font-size: 12px; }
 }
 @container (max-width: 220px) {
-  .sign { left: 4px; bottom: 4px; max-width: calc(100% - 8px); padding: 3px 7px 3px 3px; column-gap: 5px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--sign), inset 0 0 0 2.5px var(--paint); }
+  .sign { padding: 3px 7px 4px; column-gap: 5px; box-shadow: inset 0 0 0 1.5px var(--sign), inset 0 0 0 2.5px var(--paint); }
   .sign .id { padding: 0 4px; font-size: 10.5px; }
   .sign .name { font-size: 11px; }
-  .lamp { top: 6px; right: 6px; width: 8px; height: 8px; }
+  .sign .lamp { width: 7px; height: 7px; }
 }
 
 .foot { gap: 16px; font-size: 13px; color: var(--dim); }
@@ -95,11 +98,11 @@ select { max-width: 17em; }
 .lane i { position: absolute; inset: 0 auto 0 0; width: 0; background: repeating-linear-gradient(90deg, var(--lane) 0 24px, transparent 24px 36px); transition: width .25s linear; }
 
 /* ไฟสัญญาณ: เหลือง = กำลังเชื่อมต่อ, เขียว = live, แดง = ไม่มีสัญญาณ */
-.lamp { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--lane); box-shadow: 0 0 0 3px rgb(0 0 0 / .55); }
+.lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--lane); box-shadow: 0 0 0 2px rgb(0 0 0 / .3); }
 .tile[data-state="connecting"] .lamp { animation: blink 1s ease-in-out infinite; }
-.tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 3px rgb(0 0 0 / .55), 0 0 10px var(--go); }
+.tile[data-state="live"] .lamp { background: var(--go); box-shadow: 0 0 0 2px rgb(0 0 0 / .3), 0 0 8px var(--go); }
 .tile[data-state="offline"] .lamp, .tile[data-state="unsupported"] .lamp { background: var(--stop); }
-.tile[data-state="offline"], .tile[data-state="unsupported"] { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
+.tile[data-state="offline"] .screen, .tile[data-state="unsupported"] .screen { background: repeating-linear-gradient(135deg, #16191C 0 16px, #1B1F23 16px 32px); }
 .tile[data-state="blocked"] { cursor: pointer; }
 .tile[data-state="blocked"] .msg { background: rgb(0 0 0 / .55); color: var(--paint); font-size: 15px; font-weight: 600; }
 .msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; font-size: 14px; color: var(--dim); pointer-events: none; }
@@ -112,7 +115,8 @@ select { max-width: 17em; }
 @media (max-width: 700px) {
   body { height: auto; min-height: 100dvh; }
   .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .tile { aspect-ratio: 16 / 9; }
+  .tile { grid-template-rows: auto auto; }
+  .screen { aspect-ratio: 16 / 9; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
@@ -162,10 +166,8 @@ select { max-width: 17em; }
 </footer>
 <template id="tile-tpl">
   <figure class="tile" role="button" tabindex="0" data-state="connecting">
-    <video muted playsinline></video>
-    <span class="lamp" aria-hidden="true"></span>
-    <p class="msg"></p>
-    <figcaption class="sign"><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
+    <div class="screen"><video muted playsinline></video><p class="msg"></p></div>
+    <figcaption class="sign"><span class="lamp" aria-hidden="true"></span><b class="id"></b><span class="name"></span><small class="grp"></small></figcaption>
   </figure>
 </template>
 <script>
@@ -205,12 +207,12 @@ const pickPlayer = ({ ua, touch, hls, native, force }) => {
 };
 // เบราว์เซอร์ในตัว Smart TV (Samsung Tizen, LG webOS ฯลฯ) ถอดรหัสวิดีโอได้ทีละภาพ จึงเปิดมาเป็น 1 จอ
 const isTV = ua => /Tizen|Web0S|webOS|SMART-TV|SmartTV|HbbTV|NetCast|BRAVIA/i.test(ua);
-// หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h
-const fit = (n, w, h) => {
+// หา [คอลัมน์, แถว] ที่ทำให้ภาพ 16:9 ใหญ่ที่สุดเมื่อวาง n จอในพื้นที่ w×h (strip = ความสูงแถบชื่อใต้ภาพ)
+const fit = (n, w, h, strip = 0) => {
   let best = [1, n], bestW = 0;
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols);
-    const tileW = Math.min(w / cols, (h / rows) * 16 / 9);
+    const tileW = Math.min(w / cols, (h / rows - strip) * 16 / 9);
     if (tileW > bestW) { bestW = tileW; best = [cols, rows]; }
   }
   return best;
@@ -323,11 +325,10 @@ function render() {
 
 // "ทั้งหมด" คำนวณคอลัมน์ตามขนาดจอจริง ส่วน 4/9/16 เป็นตารางจัตุรัส
 function layout() {
-  const [cols, rows] = state.size === 'all'
-    ? fit(grid.children.length, grid.clientWidth - 32, grid.clientHeight)
-    : [Math.sqrt(state.size), Math.sqrt(state.size)];
-  grid.style.setProperty('--cols', cols);
-  grid.style.setProperty('--rows', rows);
+  const apply = ([cols, rows]) => { grid.style.setProperty('--cols', cols); grid.style.setProperty('--rows', rows); };
+  if (state.size !== 'all') return apply([Math.sqrt(state.size), Math.sqrt(state.size)]);
+  // แถบชื่อสูงไม่เท่ากันตามความกว้างช่อง จึงคำนวณ 2 รอบ รอบสองใช้ความสูงแถบหลังจัดช่องแล้ว
+  for (let i = 0; i < 2; i++) apply(fit(grid.children.length, grid.clientWidth - 32, grid.clientHeight, grid.querySelector('.sign')?.offsetHeight || 0));
 }
 
 function sync() {
@@ -436,6 +437,7 @@ if (location.hash === '#test') {
     ['ทั้งหมด 3 จอบนจอ 16:9 ใช้ 2×2 เพราะภาพใหญ่กว่าเรียงแถวเดียว', eq(fit(3, 1408, 790), [2, 2])],
     ['ทั้งหมด 3 จอบนจอกว้างมากเรียงแถวเดียว', eq(fit(3, 2560, 480), [3, 1])],
     ['ทั้งหมด 1 จอ', eq(fit(1, 1408, 790), [1, 1])],
+    ['ทั้งหมด 40 จอเผื่อความสูงแถบชื่อใต้ภาพ 24px ได้ 7×6', eq(fit(40, 1408, 800, 24), [7, 6])],
     ['iPhone iOS ใหม่ใช้ HLS ในตัวแม้ hls.js รองรับ', pickPlayer({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 Version/27.0 Mobile/15E148 Safari/604.1', touch: 5, hls: true, native: true }) === 'native'],
     ['iPad (UA แบบ Mac + จอสัมผัส) ใช้ HLS ในตัว', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 5, hls: true, native: true }) === 'native'],
     ['Mac Safari ใช้ hls.js', pickPlayer({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/27.0 Safari/605.1.15', touch: 0, hls: true, native: true }) === 'hls'],
