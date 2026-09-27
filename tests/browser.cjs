@@ -31,6 +31,21 @@ const fs = require('node:fs');
     });
     check('buffering leaves footage unobscured with status below the image', buffering.state === 'buffering' && buffering.text === '' && buffering.background === 'rgba(0, 0, 0, 0)' && buffering.label === 'รอภาพ' && buffering.captionBelow);
     await page.reload(); await page.locator('.tile').first().waitFor();
+    for (const [width, layout] of [[1440, '9'], [1440, '16'], [1440, 'all'], [768, '4']]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.click(`[data-n="${layout}"]`);
+      await page.waitForTimeout(150);
+      const fault = await page.locator('.tile').first().evaluate(tile => {
+        tile.querySelector('video').dispatchEvent(new Event('ended'));
+        const label = tile.querySelector('.state-label');
+        const style = getComputedStyle(label);
+        const rect = label.getBoundingClientRect();
+        return { state: tile.dataset.state, text: label.textContent, clip: style.clipPath, width: rect.width, height: rect.height };
+      });
+      check(`readable camera fault at ${width}px in ${layout} layout: ${JSON.stringify(fault)}`, fault.state === 'offline' && fault.text.length > 0 && fault.clip === 'none' && fault.width > 1 && fault.height > 1);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.click('[data-n="4"]');
     await page.fill('#search', 'ccs03');
     await page.waitForFunction(() => document.querySelectorAll('.tile').length === 1);
     check('search by camera ID', await page.locator('.tile').getAttribute('data-id') === '03');
@@ -94,6 +109,7 @@ const fs = require('node:fs');
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(250);
+    await page.reload(); await page.waitForTimeout(200);
     check('phone uses a swipe view', await page.locator('#grid').evaluate(el => el.classList.contains('swipe')));
     check('only one phone camera connects at once', await page.locator('.tile:not([data-state="paused"])').count() === 1);
     await page.locator('.tile:not([data-state="paused"]) video').evaluate(video => video.dispatchEvent(new Event('playing')));
@@ -103,6 +119,11 @@ const fs = require('node:fs');
     check('swipe releases previous player', await page.locator('.tile:not([data-state="paused"])').count() === 1);
     await page.click('[data-n="all"]'); await page.waitForTimeout(150);
     check('phone all view shows 40 cameras without connecting all streams', await page.locator('.tile').count() === 40 && await page.locator('.tile:not([data-state="paused"])').count() < 12);
+    const overviewCaption = await page.locator('.caption').first().evaluate(caption => ({
+      columns: getComputedStyle(caption).gridTemplateColumns.split(' ').length,
+      statusClip: getComputedStyle(caption.querySelector('.state-label')).clipPath,
+    }));
+    check('phone overview keeps two caption columns and readable status', overviewCaption.columns === 2 && overviewCaption.statusClip === 'none');
     await page.locator('.camera-open').nth(1).click(); await page.waitForTimeout(200);
     check('opening a phone grid camera selects the correct swipe camera', (await page.locator('#page').textContent()).includes('2 / 40'));
     await page.goto(url + '/#test');
@@ -119,6 +140,41 @@ const fs = require('node:fs');
     await page.reload(); await page.locator('.favorite-button').first().click();
     check('storage denial still permits favorites for this visit', await page.locator('#favorite-count').textContent() === '1');
     check('no uncaught errors after fallback cases', errors.length === 0);
+    const navigationContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await navigationContext.route('https://camerai1.iticfoundation.org/**', route => route.abort());
+    await navigationContext.route('https://fonts.googleapis.com/**', route => route.abort());
+    const navigation = await navigationContext.newPage();
+    await navigation.goto(url);
+    const order = await navigation.evaluate(() => CctvCore.filterCameras().map(cam => cam.id));
+    await navigation.locator('.camera-open').nth(2).click();
+    await navigation.click('#next');
+    check('expanded next advances one camera in catalog order', await navigation.locator('.tile.focused').getAttribute('data-id') === order[3]);
+    await navigation.click('#exit-focus');
+    check('return from expanded view preserves the containing camera page', JSON.stringify(await navigation.locator('.tile').evaluateAll(tiles => tiles.map(t => t.dataset.id))) === JSON.stringify(order.slice(0, 4)));
+    await navigation.locator('.camera-open').nth(2).click();
+    await navigation.click('[data-n="1"]');
+    check('switching expanded camera to one-camera layout preserves its position', await navigation.locator('.tile').getAttribute('data-id') === order[2]);
+    for (let offset = 1; offset <= order.length; offset++) {
+      await navigation.click('#next');
+      check(`single-camera tour follows catalog position ${(2 + offset) % order.length + 1}`, await navigation.locator('.tile').getAttribute('data-id') === order[(2 + offset) % order.length]);
+    }
+    await navigation.setViewportSize({ width: 390, height: 844 });
+    await navigation.waitForTimeout(250);
+    check('desktop to phone preserves the selected camera', (await navigation.locator('#page').textContent()).includes('3 / 40'));
+    await navigation.setViewportSize({ width: 1440, height: 900 });
+    await navigation.waitForTimeout(250);
+    check('phone to desktop preserves the selected camera', await navigation.locator('.tile').getAttribute('data-id') === order[2]);
+    await navigation.click('[data-n="4"]');
+    await navigation.locator('.camera-open').nth(3).click();
+    await navigation.click('#next');
+    check('expanded navigation crosses grid pages without skipping cameras', await navigation.locator('.tile.focused').getAttribute('data-id') === order[4]);
+    await navigation.click('#exit-focus');
+    check('return after crossing a page keeps the current camera in its original grid order', JSON.stringify(await navigation.locator('.tile').evaluateAll(tiles => tiles.map(t => t.dataset.id))) === JSON.stringify(order.slice(4, 8)));
+    await navigation.click('[data-n="all"]');
+    await navigation.locator('.camera-open').last().click();
+    await navigation.click('#next');
+    check('expanded overview wraps from the last camera to the first', await navigation.locator('.tile.focused').getAttribute('data-id') === order[0]);
+    await navigationContext.close();
     fs.mkdirSync('docs/reviews/evidence', { recursive: true });
     fs.writeFileSync('docs/reviews/evidence/browser-results.json', JSON.stringify({ checks, errors, at: new Date().toISOString() }, null, 2) + '\n');
     console.log(`${checks} browser checks passed`);

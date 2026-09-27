@@ -1,107 +1,57 @@
-# กล้องจราจรฉะเชิงเทรา
+﻿# CCTV Smart City
 
-เว็บดูกล้องจราจร 40 จุด ใน 10 กลุ่มทางแยก สำหรับประชาชนใช้งานบนมือถือและคอมพิวเตอร์ ภาพ HLS จาก ITIC และรายชื่อจาก [CCS CCTV](https://sites.google.com/view/ccs-cctv) ออกแบบและพัฒนาโดย Ruthapoom Sib
+A responsive live traffic camera viewer for Chachoengsao, Thailand, covering **40 cameras across 10 intersection groups**. Built with HTML, CSS, and JavaScript, using HLS streams from ITIC and camera listings from [CCS CCTV](https://sites.google.com/view/ccs-cctv).
 
-## เปิดใช้งานในเครื่อง
+## Features
 
-ต้องมี Node.js 20 ขึ้นไป ไม่ต้องติดตั้ง dependency เพื่อเปิดเว็บ:
+- Search cameras by name, road, intersection, or ID.
+- Filter intersections and save favorites in your browser.
+- Desktop layouts with 1, 4, 9, 16, or all cameras.
+- Mobile swipe navigation and an all-camera overview.
+- Camera order follows the original intersection list; expanded navigation moves one camera at a time and layout changes preserve the current position.
+- Automatic rotation, playback status, and stream recovery.
+- Mint and navy SVG logo combining a camera lens and city skyline, used in the header and favicon.
+
+## Run locally
+
+Requires **Node.js 20+**. No dependencies are needed to serve the app.
 
 ```sh
 npm start
 ```
 
-เปิด **http://127.0.0.1:8000** ตัว preview server รับการเชื่อมต่อเฉพาะในเครื่อง และให้บริการเฉพาะไฟล์หน้าเว็บ ใช้พอร์ตอื่นได้ด้วย environment variable `PORT` หากพอร์ต 8000 ถูกใช้อยู่
+Open **http://127.0.0.1:8000**. Set `PORT` to use another port. Live streams require internet access.
 
-หากไม่มี Node.js ใช้ `python -m http.server 8000 --bind 127.0.0.1` แล้วเปิด http://127.0.0.1:8000 ได้เช่นกัน ต้องมีอินเทอร์เน็ตเพื่อรับภาพจากต้นทาง
-
-## สิ่งที่ทำได้
-
-- ค้นหาชื่อกล้อง ถนน ทางแยก หรือรหัส เช่น `ccs03` รองรับกล้องที่อยู่ในหลายกลุ่มทางแยก
-- กรองตามทางแยกและกดดาวเก็บกล้องโปรดในเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก
-- คอมพิวเตอร์เริ่มต้น 4 จอ เลือกได้ 1 / 4 / 9 / 16 / ทั้งหมด และจำค่าที่เลือกไว้
-- มือถือเริ่มแบบปัดซ้าย–ขวาทีละกล้อง หรือเลือก “ทั้งหมด” เพื่อเลื่อนดูรายการ แล้วแตะภาพเพื่อขยาย
-- คลิกภาพบนคอมพิวเตอร์เพื่อขยาย กลับได้ด้วยปุ่ม “กลับทุกจอ” คลิกภาพซ้ำ หรือ Esc
-- วนอัตโนมัติทุก 10 / 15 / 30 / 60 วินาที เริ่มเมื่อผู้ใช้กดเอง และไม่จำสถานะเปิดวนข้ามการเยี่ยมชม
-- เล่นเฉพาะกล้องที่มองเห็น หยุดกล้องที่ถูกซ่อน รวมถึงเมื่อซ่อนแท็บหรือขาดอินเทอร์เน็ต และเชื่อมต่อกลับเมื่อพร้อม
-- แสดงสถานะกำลังเชื่อมต่อ กำลังเล่น ภาพสะดุด ต้องแตะเพื่อเล่น และไม่มีสัญญาณตามตัวเล่นจริง
-- มีเวลาตัดรอการเชื่อมต่อ 25 วินาที และระบบลองใหม่เมื่อสตรีมล้มเหลวหรือหยุดเดิน
-- กดปุ่มวิธีใช้งานมุมขวาบนเพื่อดูคำแนะนำและคีย์ลัด
-
-ตัวนับ “กำลังเล่น x/y บนจอ” นับจากตัวเล่นที่เปิดอยู่ ไม่ใช่การตรวจกล้องทั้งเมือง และไม่ได้ยืนยันว่าเวลาของภาพตรงกับเหตุการณ์จริง ภาพอาจล่าช้าหรือขาดช่วงตามต้นทาง
-
-กล้องโปรดและการตั้งค่าเก็บใน `localStorage` ของแต่ละเบราว์เซอร์ ไม่ซิงก์ข้ามเครื่อง หากพื้นที่เก็บข้อมูลถูกบล็อก เว็บยังใช้ได้ในครั้งนั้นและจะแจ้งว่าไม่สามารถบันทึกได้
-
-## คีย์ลัดและอุปกรณ์
-
-| ปุ่ม | การทำงาน |
-|---|---|
-| ← / → | กล้องหรือหน้าก่อนหน้า / ถัดไป |
-| Space | เปิด / ปิดวนอัตโนมัติ |
-| F | เข้า / ออกเต็มจอ หากเบราว์เซอร์รองรับ |
-| Esc | ออกจากภาพขยาย หรือปิดวิธีใช้งาน |
-
-คีย์ลัดไม่ทำงานขณะพิมพ์ในช่องค้นหาหรือเลือกค่าจาก dropdown
-
-iPhone/iPad เลือก native HLS ก่อน หากขึ้น “แตะเพื่อเล่นภาพสด” ให้แตะภาพหนึ่งครั้ง การเปิดเต็มจอขึ้นกับความสามารถของเบราว์เซอร์ Smart TV ที่ระบบตรวจพบเริ่มต้น 1 จอ แต่ความเข้ากันได้ต้องทดสอบบนรุ่นจริง หากต้องการหลายจอบน TV ใช้คอมพิวเตอร์ต่อ HDMI
-
-## โครงสร้าง
-
-```text
-index.html             โครงสร้างหน้าและคำอธิบายภาษาไทย
-styles.css             รูปแบบคอมพิวเตอร์และมือถือ
-scripts/data.js        รายชื่อกล้องและ URL ต้นทาง
-scripts/core.js        ค้นหา กรอง แบ่งหน้า ตรวจค่าที่บันทึก
-scripts/player.js      วงจรเล่นวิดีโอ การลองใหม่ และคืนทรัพยากร
-scripts/app.js         การโต้ตอบ สถานะ รายการโปรด และมุมมอง
-vendor/                hls.js 1.7.3 ที่ตรึงเวอร์ชัน พร้อมใบอนุญาต
-tools/                 preview server และจัดไฟล์เผยแพร่
-tests/                 ทดสอบ logic, player, UI และภาพสดจริง
-docs/reviews/          ขอบเขตงาน ผลทดสอบ และภาพหน้าจอ
-```
-
-แก้รายชื่อกล้องที่ `GROUPS` ใน `scripts/data.js` รูปแบบ `[ชื่อทางแยก, [[รหัส, ชื่อจุด], …]]` รหัสคือตัวเลขใน `ccsNN.m3u8` มุมมองทุกทางแยกตัดรายการซ้ำตามรหัส แต่ยังค้นหาได้จากชื่อทุกกลุ่มที่เกี่ยวข้อง หากเพิ่มจำนวนกล้องหรือกลุ่ม ให้แก้ข้อความจำนวนใน header, description และชุดทดสอบด้วย
-
-## ทดสอบ
-
-ชุดทดสอบ logic ใช้ Node.js โดยไม่ต้องติดตั้งแพ็กเกจ:
+## Test
 
 ```sh
 npm run check
-```
-
-ติดตั้งเครื่องมือทดสอบ UI (ทำเฉพาะเครื่องพัฒนา):
-
-```sh
 npm ci
 npx playwright install chromium
 npm run test:browser
 npm run test:live
 ```
 
-- `test:browser` ทดสอบการกดใช้งานและจำลองสตรีมล้มเหลวอย่างแน่นอน ไม่ขึ้นกับสถานะกล้องสาธารณะ
-- `test:live` ติดต่อ ITIC จริง ตรวจว่าเวลาวิดีโอเดิน พร้อมเก็บภาพหน้าจอ จึงอาจไม่ผ่านหากเครือข่ายหรือต้นทางไม่พร้อม
-- ผลล่าสุดอยู่ที่ `docs/reviews/evidence/` การทดสอบบน Chromium ไม่ทดแทนการทดสอบ iPhone/iPad หรือ Smart TV จริง
-- เปิด `/#test` โดยโหลดหน้าใหม่เพื่อดู self-check เบื้องต้น ชื่อแท็บควรเป็น `TEST PASS`
-- `?debug` แสดงค่าตัวเล่นใต้ภาพ, `?player=native` หรือ `?player=hls` เลือกตัวเล่นสำหรับวิเคราะห์เมื่ออุปกรณ์รองรับ
+Browser tests simulate stream failures; live tests depend on upstream availability. Results are saved in `docs/reviews/evidence/`.
 
-## เผยแพร่
-
-หน้าเว็บเป็น static ไม่มี backend, API key หรือ production dependency จัดไฟล์เผยแพร่ด้วย:
+## Build and deploy
 
 ```sh
 npm run build
 ```
 
-คำสั่งนี้คัดลอกไฟล์สาธารณะ 9 ไฟล์ไปยัง `dist/` ไม่รวม tests, docs หรือไฟล์ตั้งค่าส่วนตัว จากนั้นนำ `dist/` ไปวางบน static hosting ที่ให้บริการผ่าน HTTPS
+Publish `dist/` to an HTTPS static host. For Vercel, choose the **Other** framework preset; `vercel.json` includes the build settings. No backend or API keys are required.
 
-สำหรับ Vercel ให้ import repository และใช้ Framework Preset **Other** ไฟล์ `vercel.json` ตั้ง build command และ output directory ไว้แล้ว โดยไม่ต้องติดตั้ง npm dependencies ระหว่าง deploy ดู [เอกสารการตั้งค่า Vercel](https://vercel.com/docs/project-configuration/vercel-json)
+## Customize
 
-Vercel Web Analytics โหลดอัตโนมัติบนโดเมน `.vercel.app` หลังเปิด Analytics ในโปรเจกต์ หากใช้ custom domain บน Vercel ให้เพิ่ม `<meta name="vercel-analytics" content="enabled">` ใน `<head>` หน้าเว็บจะไม่เรียก endpoint นี้บน localhost หรือ static host อื่นโดยปริยาย
+- `scripts/data.js` — camera groups and stream URLs.
+- `styles.css` — responsive styling.
+- `assets/favicon.svg` — shared app logo and browser icon.
 
-หลัง deploy ควรตรวจการเล่นภาพ, การเปลี่ยนกล้องบนมือถือ, กล้องที่ไม่มีสัญญาณ และการกลับมาออนไลน์อีกครั้งบน URL จริง การปรับปรุงรอบนี้ยังไม่ได้ deploy หรือ push ไปยัง production
+## Notes
 
-## ข้อจำกัดของข้อมูล
+Streams may be delayed or unavailable. No video recording or playback history is provided. Favorites and settings stay in the current browser. Reduce the number of visible cameras if playback slows down.
 
-ภาพและความพร้อมของกล้องขึ้นอยู่กับ ITIC/ผู้ดูแลกล้อง เว็บนี้ไม่บันทึกวิดีโอ ไม่มีภาพย้อนหลัง และไม่สามารถกู้กล้องที่ต้นทางล่มได้ การเปิดหลายกล้องพร้อมกันเพิ่มการใช้เครือข่ายและการถอดรหัสวิดีโอ หากภาพสะดุดให้ลดจำนวนจอหรือเลือกทางแยกที่ต้องการ
+Keyboard shortcuts: **Left/Right** to navigate, **Space** to toggle rotation, **F** for fullscreen, and **Esc** to exit expanded view or close help.
 
-ตัวเล่น HLS ถูกเก็บในโปรเจกต์เพื่อไม่ให้การโหลดหน้าเว็บขึ้นกับ CDN ฟอนต์จาก Google Fonts เป็นตัวเลือกด้านหน้าตา หากโหลดไม่ได้จะใช้ฟอนต์ระบบแทน ใบอนุญาตของ hls.js และส่วนประกอบที่เกี่ยวข้องอยู่ที่ `vendor/hls-LICENSE`
+Developed by **Ruthapoom Sib**. Bundled hls.js license: `vendor/hls-LICENSE`.
