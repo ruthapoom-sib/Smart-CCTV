@@ -17,6 +17,13 @@
   let searchTimer, toastTimer, resizeTimer, statusQueued = false, storageWarned = false;
   const swipe = () => mobile.matches && state.size !== 'all';
   const canPlay = () => !document.hidden && navigator.onLine;
+  function currentCameraId() {
+    return state.focus || (grid.classList.contains('swipe') ? tiles[state.page] : tiles[0])?.cam.id;
+  }
+  function pageForCamera(id) {
+    const index = Math.max(0, filtered.findIndex(cam => cam.id === id));
+    return swipe() ? index : state.size === 'all' ? 0 : Math.floor(index / state.size);
+  }
   const resetTimer = () => { due = Date.now() + state.interval * 1000; };
   function toast(message) {
     clearTimeout(toastTimer); $('toast').textContent = message; $('toast').hidden = false;
@@ -195,7 +202,7 @@
     $('auto').querySelector('use').setAttribute('href', state.auto ? '#i-pause' : '#i-play');
     $('auto').querySelector('span').textContent = state.auto ? 'หยุดวน' : 'วนอัตโนมัติ';
     $('auto').disabled = pageCount < 2;
-    $('prev').disabled = $('next').disabled = pageCount < 2;
+    $('prev').disabled = $('next').disabled = state.focus ? filtered.length < 2 : pageCount < 2;
     $('refresh').disabled = !filtered.length || !navigator.onLine;
     $('exit-focus').hidden = !state.focus;
     $('page').textContent = !filtered.length ? '0 กล้อง' : state.focus ? 'คลิกภาพหรือกด Esc เพื่อกลับ'
@@ -205,6 +212,15 @@
     queueStatus();
   }
   function go(step) {
+    if (state.focus) {
+      const index = filtered.findIndex(cam => cam.id === state.focus);
+      const cam = filtered[wrap(index + step, filtered.length)];
+      if (!cam) return;
+      state.page = pageForCamera(cam.id);
+      render();
+      toggleFocus(tiles.find(tile => tile.cam.id === cam.id));
+      return;
+    }
     if (pageCount < 2) return;
     state.page = wrap(state.page + step, pageCount);
     if (swipe()) { scrollToCurrent(); sync(); } else render();
@@ -249,7 +265,8 @@
     button.onclick = () => {
       const size = button.dataset.n === 'all' ? 'all' : Number(button.dataset.n);
       if (state.size === size || (swipe() && size === 1)) return;
-      state.size = size; state.page = 0; save(); render();
+      const id = currentCameraId();
+      state.size = size; state.page = pageForCamera(id); save(); render();
     };
   });
   $('prev').onclick = () => go(-1); $('next').onclick = () => go(1);
@@ -290,7 +307,10 @@
   addEventListener('online', visibilityChanged); addEventListener('offline', visibilityChanged);
   addEventListener('pagehide', () => { [...players.keys()].forEach(stopTile); });
   addEventListener('pageshow', visibilityChanged);
-  mobile.addEventListener('change', () => { state.page = 0; render(); });
+  mobile.addEventListener('change', () => {
+    const id = currentCameraId();
+    state.page = pageForCamera(id); render();
+  });
   addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { layout(); if (swipe()) scrollToCurrent(); }, 120); });
   if ('ResizeObserver' in window) new ResizeObserver(() => layout()).observe(grid);
   render(); visibilityChanged(); tick(); setInterval(tick, 250);
