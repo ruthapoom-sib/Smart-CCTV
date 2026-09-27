@@ -208,7 +208,7 @@ const MSG = { connecting: 'กำลังเชื่อมต่อ…', live:
 
 function play(tile, cam) {
   const video = tile.querySelector('video');
-  let hls = null, fails = 0, timer;
+  let hls = null, fails = 0, timer, lastT = -1, still = 0;
   video.muted = true; // autoplay ต้อง muted; ตั้ง property ด้วยเพราะ clone จาก template อาจไม่ได้ค่านี้มา
   const set = s => { tile.dataset.state = s; tile.querySelector('.msg').textContent = MSG[s]; };
   // ไม่ใช้ attribute autoplay เพราะ iOS (เช่นโหมดประหยัดพลังงาน) ข้ามไปเงียบๆ; เรียก play() เองจะได้รู้ว่าโดนบล็อก
@@ -248,8 +248,15 @@ function play(tile, cam) {
   }
 
   video.onplaying = () => { fails = 0; set('live'); };
+  video.onended = () => { set('connecting'); retry(3000); };
+  // ภาพค้างไม่มี error ให้จับ (กล้องดับแต่ server ยังเสิร์ฟ playlist เดิม): live แต่เวลาไม่เดิน 15 s ให้ต่อใหม่
+  const watchdog = setInterval(() => {
+    if (tile.dataset.state !== 'live' || video.paused || document.hidden) { still = 0; return; }
+    if (video.currentTime !== lastT) { lastT = video.currentTime; still = 0; }
+    else if (++still >= 3) { still = 0; set('connecting'); retry(0); }
+  }, 5000);
   start();
-  return stop;
+  return () => { clearInterval(watchdog); stop(); };
 }
 
 // ── ui ──
@@ -265,7 +272,7 @@ const state = {
   g: Number.isInteger(saved.g) && saved.g >= -1 && saved.g < GROUPS.length ? saved.g : -1,
   page: 0,
 };
-const save = () => localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g }));
+const save = () => { try { localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g })); } catch {} }; // เบราว์เซอร์บล็อก storage: ไม่จำค่า แต่ปุ่มยังทำงาน
 let cleanups = [], pageCount = 1;
 
 function tileFor(cam) {
@@ -312,7 +319,13 @@ function sync() {
 
 $('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
 $('group').onchange = e => { state.g = +e.target.value; state.page = 0; save(); render(); };
-document.querySelectorAll('[data-n]').forEach(b => { b.onclick = () => { state.size = b.dataset.n === 'all' ? 'all' : +b.dataset.n; state.page = 0; save(); render(); }; });
+document.querySelectorAll('[data-n]').forEach(b => {
+  b.onclick = () => {
+    const size = b.dataset.n === 'all' ? 'all' : +b.dataset.n;
+    if (size === state.size) return; // กดปุ่มที่เลือกอยู่แล้ว ไม่ต้องกลับหน้าแรกและเริ่มสตรีมใหม่
+    state.size = size; state.page = 0; save(); render();
+  };
+});
 addEventListener('resize', layout);
 
 // ── tour ──
@@ -365,8 +378,11 @@ fs.hidden = !document.fullscreenEnabled; // iOS Safari เปิดเต็ม�
 fs.onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
 document.onfullscreenchange = () => { fs.textContent = document.fullscreenElement ? 'ออกจากเต็มจอ' : 'เต็มจอ'; };
 
+// คลิกเมาส์แล้วไม่ให้ปุ่ม/จอค้าง focus ไว้ ไม่งั้น Space/ลูกศรจะไปกดปุ่มนั้นแทนคีย์ลัด (ใช้ Tab จากคีย์บอร์ดได้ตามปกติ)
+document.addEventListener('mousedown', e => { if (e.target.closest('button, .tile')) e.preventDefault(); });
+
 document.addEventListener('keydown', e => {
-  if (e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.repeat || e.target.closest('select') || e.altKey || e.ctrlKey || e.metaKey) return;
   const onControl = e.target.closest('button, [role="button"]'); // ปุ่มจัดการ Space/Enter เองอยู่แล้ว
   if (e.code === 'Space' && !onControl) { e.preventDefault(); $('auto').click(); }
   else if (e.key === 'ArrowRight') go(1);
