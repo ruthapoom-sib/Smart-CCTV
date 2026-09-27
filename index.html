@@ -10,6 +10,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js"></script>
+<script>
+// Vercel Web Analytics (แบบ HTML ธรรมดา ไม่ต้องใช้ npm) ไม่โหลดตอนเปิดในเครื่อง/วง LAN เพราะ path นี้มีเฉพาะบน Vercel
+window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+if (location.protocol === 'https:' && !/^(localhost|127\.|10\.|192\.168\.)/.test(location.hostname)) {
+  document.head.append(Object.assign(document.createElement('script'), { defer: true, src: '/_vercel/insights/script.js' }));
+}
+</script>
 <style>
 :root {
   --asphalt: #1F2327;
@@ -57,23 +64,22 @@ select { max-width: 17em; }
   padding: 0 16px;
 }
 /* ช่องกล้อง = ภาพด้านบน + แถบป้ายบอกทางด้านล่าง ไม่มีอะไรทับภาพ */
-.tile { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; background: var(--sign); border-radius: 6px; cursor: zoom-in; container-type: inline-size; }
+.tile { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; background: #15181B; border-radius: 6px; cursor: zoom-in; container-type: inline-size; }
 .screen { position: relative; min-height: 0; background: #000; }
 .tile video { display: block; width: 100%; height: 100%; object-fit: contain; }
 
-/* แถบป้ายบอกทาง: พื้นเขียว มีเส้นขอบขาวด้านใน */
+/* แถบชื่อใต้ภาพ: สีเทาเข้มเรียบ ไม่แย่งสายตาจากภาพ มีสีแค่ไฟสถานะ */
 .sign {
   display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 8px; align-items: center;
   padding: 6px 12px 7px;
   color: var(--paint);
-  border-radius: 0 0 6px 6px;
-  box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3.5px var(--paint);
+  border-top: 1px solid rgb(255 255 255 / .06);
 }
 .sign .lamp, .sign .id { grid-row: span 2; }
-.sign .id { padding: 1px 6px; background: var(--paint); color: var(--sign); border-radius: 4px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sign .id { padding: 1px 6px; background: rgb(255 255 255 / .08); color: var(--dim); border-radius: 4px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sign .name, .sign .grp { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; line-height: 1.35; }
 .sign .name { font-size: 14px; font-weight: 600; }
-.sign .grp { font-size: 12px; opacity: .85; }
+.sign .grp { font-size: 12px; color: var(--dim); }
 @container (max-width: 420px) {
   .sign { padding: 4px 9px 5px; column-gap: 6px; }
   .sign .name { font-size: 12.5px; }
@@ -84,7 +90,7 @@ select { max-width: 17em; }
   .tile .msg { font-size: 12px; }
 }
 @container (max-width: 220px) {
-  .sign { padding: 3px 7px 4px; column-gap: 5px; box-shadow: inset 0 0 0 1.5px var(--sign), inset 0 0 0 2.5px var(--paint); }
+  .sign { padding: 3px 7px 4px; column-gap: 5px; }
   .sign .id { padding: 0 4px; font-size: 10.5px; }
   .sign .name { font-size: 11px; }
   .sign .lamp { width: 7px; height: 7px; }
@@ -92,6 +98,9 @@ select { max-width: 17em; }
 
 .foot { gap: 16px; font-size: 13px; color: var(--dim); }
 .foot a { color: var(--paint); }
+.credit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.credit a { display: inline-flex; }
+.credit small { opacity: .7; }
 #page { min-width: 10em; font-variant-numeric: tabular-nums; }
 /* เส้นประแบ่งช่องจราจร: สีเหลืองเติมเต็มเมื่อใกล้เปลี่ยนหน้า */
 .lane { position: relative; flex: 1; min-width: 80px; height: 4px; background: repeating-linear-gradient(90deg, var(--kerb) 0 24px, transparent 24px 36px); }
@@ -112,11 +121,18 @@ select { max-width: 17em; }
 .grid.has-focus .tile:not(.focused) { display: none; }
 .tile.focused { cursor: zoom-out; }
 
+/* มือถือ: ปัดซ้าย-ขวาทีละกล้อง (JS ใส่ class swipe ตาม SWIPE media query) */
+.grid.swipe { position: relative; display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.grid.swipe::-webkit-scrollbar { display: none; }
+.grid.swipe .tile { flex: 0 0 100%; grid-template-rows: auto auto; align-self: start; scroll-snap-align: center; scroll-snap-stop: always; cursor: default; }
+.grid.swipe .screen { aspect-ratio: 16 / 9; }
+.grid.swipe .sign { padding: 10px 14px 12px; column-gap: 10px; }
+.grid.swipe .sign .name { font-size: 17px; white-space: normal; }
+.grid.swipe .sign .grp { display: block; font-size: 14px; white-space: normal; }
+
 @media (max-width: 700px) {
   body { height: auto; min-height: 100dvh; }
-  .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .tile { grid-template-rows: auto auto; }
-  .screen { aspect-ratio: 16 / 9; }
+  .sizes { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
@@ -137,7 +153,7 @@ select { max-width: 17em; }
   </div>
   <div class="controls">
     <select id="group" aria-label="เลือกทางแยก"></select>
-    <div class="seg" role="group" aria-label="จำนวนจอต่อหน้า">
+    <div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า">
       <button type="button" data-n="1">1 จอ</button>
       <button type="button" data-n="4">4 จอ</button>
       <button type="button" data-n="9">9 จอ</button>
@@ -162,7 +178,11 @@ select { max-width: 17em; }
 <footer class="bar foot">
   <span id="page"></span>
   <div class="lane" aria-hidden="true"><i id="progress"></i></div>
-  <span>ภาพสดจาก <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener">มูลนิธิศูนย์ข้อมูลจราจรอัจฉริยะไทย (ITIC)</a></span>
+  <span class="credit">
+    <a href="https://github.com/ruthapoom-sib/Smart-CCTV" target="_blank" rel="noopener" aria-label="ซอร์สโค้ดบน GitHub"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <span>ออกแบบและพัฒนาโดย Ruthapoom Sib © 2026</span>
+    <small>แหล่งภาพ: <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener">ITIC</a></small>
+  </span>
 </footer>
 <template id="tile-tpl">
   <figure class="tile" role="button" tabindex="0" data-state="connecting">
@@ -297,16 +317,20 @@ const state = {
 };
 const save = () => { try { localStorage.setItem('cctv', JSON.stringify({ size: state.size, interval: state.interval, g: state.g })); } catch {} }; // เบราว์เซอร์บล็อก storage: ไม่จำค่า แต่ปุ่มยังทำงาน
 let cleanups = [], pageCount = 1;
+const SWIPE = matchMedia('(max-width: 700px)'); // มือถือแนวตั้ง: ปัดทีละกล้องแทนตาราง
+const swiping = () => grid.classList.contains('swipe');
+const scrollToTile = (t, behavior) => grid.scrollTo({ left: t.offsetLeft - (grid.clientWidth - t.offsetWidth) / 2, behavior }); // offsetLeft นับจาก .grid.swipe (position: relative)
 
-function tileFor(cam) {
+function tileFor(cam, autoplay) {
   const tile = tpl.content.firstElementChild.cloneNode(true);
+  tile.cam = cam;
   tile.querySelector('.id').textContent = 'ccs' + cam.id;
   tile.querySelector('.name').textContent = cam.name;
   tile.querySelector('.grp').textContent = cam.group;
   tile.setAttribute('aria-label', `ขยายกล้อง ccs${cam.id} ${cam.name}`);
-  tile.onclick = () => { if (tile.dataset.state !== 'blocked') toggleFocus(tile); }; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
+  tile.onclick = () => { if (tile.dataset.state !== 'blocked' && !swiping()) toggleFocus(tile); }; // แตะจอที่ถูกบล็อก = สั่งเล่น ไม่ใช่ขยาย
   tile.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tile.click(); } };
-  cleanups.push(play(tile, cam));
+  if (autoplay) cleanups.push(play(tile, cam));
   return tile;
 }
 
@@ -314,13 +338,27 @@ function render() {
   cleanups.forEach(stop => stop());
   cleanups = [];
   const list = camsFor(state.g);
-  const pages = state.size === 'all' ? [list] : chunk(list, state.size);
-  pageCount = pages.length;
+  const swipe = SWIPE.matches;
+  const pages = swipe || state.size === 'all' ? [list] : chunk(list, state.size);
+  pageCount = swipe ? list.length : pages.length; // ปัดทีละกล้อง: 1 กล้อง = 1 หน้า สำหรับ ‹ › และวนอัตโนมัติ
   state.page = wrap(state.page, pageCount);
   grid.classList.remove('has-focus');
-  grid.replaceChildren(...pages[state.page].map(tileFor));
-  layout();
+  grid.classList.toggle('swipe', swipe);
+  grid.replaceChildren(...(swipe ? list : pages[state.page]).map(cam => tileFor(cam, !swipe)));
+  if (swipe) watchSwipe(); else layout();
   sync();
+}
+
+// เล่นเฉพาะกล้องที่อยู่บนจอ: iPhone ถอดรหัสพร้อมกันได้จำกัด และไม่เปลืองเน็ตกับกล้องที่ยังไม่ได้ดู
+function watchSwipe() {
+  const tiles = [...grid.children];
+  const io = new IntersectionObserver(entries => entries.forEach(({ target: t, isIntersecting }) => {
+    if (isIntersecting && !t.stop) { t.stop = play(t, t.cam); state.page = tiles.indexOf(t); sync(); resetTimer(); }
+    else if (!isIntersecting && t.stop) { t.stop(); t.stop = null; }
+  }), { root: grid, threshold: 0.6 });
+  tiles.forEach(t => io.observe(t));
+  cleanups.push(() => { io.disconnect(); tiles.forEach(t => t.stop?.()); });
+  scrollToTile(tiles[state.page]);
 }
 
 // "ทั้งหมด" คำนวณคอลัมน์ตามขนาดจอจริง ส่วน 4/9/16 เป็นตารางจัตุรัส
@@ -336,7 +374,9 @@ function sync() {
   $('auto').setAttribute('aria-pressed', state.auto);
   $('group').value = state.g;
   $('interval').value = state.interval;
-  $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ' : `หน้า ${state.page + 1} จาก ${pageCount}`;
+  $('page').textContent = grid.classList.contains('has-focus') ? 'คลิกภาพหรือกด Esc เพื่อกลับ'
+    : swiping() ? `กล้อง ${state.page + 1} / ${pageCount} ปัดเพื่อดูกล้องถัดไป`
+    : `หน้า ${state.page + 1} จาก ${pageCount}`;
 }
 
 $('group').append(new Option(`ทุกทางแยก (${camsFor(-1).length} จุด)`, -1), ...GROUPS.map(([name], g) => new Option(name, g)));
@@ -348,7 +388,8 @@ document.querySelectorAll('[data-n]').forEach(b => {
     state.size = size; state.page = 0; save(); render();
   };
 });
-addEventListener('resize', layout);
+addEventListener('resize', () => { if (!swiping()) layout(); });
+SWIPE.addEventListener('change', () => { state.page = 0; render(); }); // หมุนจอ/ย่อหน้าต่างข้ามขนาดมือถือ
 
 // ── tour ──
 let due = 0;
@@ -356,8 +397,11 @@ const resetTimer = () => { due = Date.now() + state.interval * 1000; };
 
 function go(step) {
   if (pageCount < 2) return resetTimer(); // มีหน้าเดียว ไม่ต้อง render ใหม่ ภาพจะได้ไม่เริ่มใหม่
-  state.page += step;
-  render();
+  state.page = wrap(state.page + step, pageCount);
+  // กระโดดทันที ไม่ใช้ smooth: เลื่อนผ่านหลายกล้อง (เช่นวนจากกล้องแรกไปกล้องสุดท้าย) จะเปิด-ปิด player ทุกกล้องที่ผ่าน
+  // และ IntersectionObserver จะเขียนเลขกล้องทับระหว่างเลื่อนถ้ากดรัวๆ
+  if (swiping()) scrollToTile(grid.children[state.page]);
+  else render();
   resetTimer();
 }
 
