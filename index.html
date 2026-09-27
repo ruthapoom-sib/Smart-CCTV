@@ -279,6 +279,8 @@ const PLAYER = pickPlayer({
   force: ['hls', 'native'].find(p => p === new URLSearchParams(location.search).get('player')), // ทดสอบบนเครื่องจริง: ?player=hls หรือ ?player=native
 });
 
+const DEBUG = new URLSearchParams(location.search).has('debug');
+
 function play(tile, cam) {
   const video = tile.querySelector('video');
   let hls = null, fails = 0, timer, lastT = -1, still = 0;
@@ -321,6 +323,14 @@ function play(tile, cam) {
   }
 
   video.onplaying = () => { fails = 0; set('live'); };
+  if (DEBUG) { // ?debug: แสดงสถานะวิดีโอจริงบนแถบชื่อ ไว้ไล่ปัญหาบนมือถือ
+    const seen = [];
+    ['play', 'playing', 'pause', 'waiting', 'stalled', 'suspend', 'emptied', 'ended', 'error'].forEach(ev => video.addEventListener(ev, () => { seen.push(ev); seen.splice(0, seen.length - 4); }));
+    const dbg = setInterval(() => {
+      if (!tile.isConnected) return clearInterval(dbg);
+      tile.querySelector('.grp').textContent = `${PLAYER} rs${video.readyState} ns${video.networkState} t${video.currentTime.toFixed(1)} ${video.videoWidth}x${video.videoHeight} ${video.paused ? 'PAUSED' : 'run'} err${video.error?.code ?? '-'} [${seen.join(',')}]`;
+    }, 1000);
+  }
   video.onended = () => { set('connecting'); retry(3000); };
   // ภาพค้างไม่มี error ให้จับ (กล้องดับแต่ server ยังเสิร์ฟ playlist เดิม): live แต่เวลาไม่เดิน 15 s ให้ต่อใหม่
   const watchdog = setInterval(() => {
