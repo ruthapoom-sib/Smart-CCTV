@@ -2,11 +2,11 @@
 (() => {
   'use strict';
   const MESSAGES = {
-    connecting: 'กำลังเชื่อมต่อภาพสด…', live: '', buffering: 'ภาพสะดุด กำลังเชื่อมต่อ…',
-    blocked: 'แตะเพื่อเล่นภาพสด', offline: 'ยังรับภาพไม่ได้ · จะลองใหม่อัตโนมัติ',
+    connecting: '', live: '', buffering: '',
+    blocked: 'แตะเพื่อเล่นภาพสด', offline: '',
     unsupported: 'อุปกรณ์นี้ไม่รองรับการเล่นภาพสด', paused: 'พักการเชื่อมต่อ',
   };
-  const LABELS = { connecting: 'กำลังเชื่อมต่อ', live: 'กำลังเล่น', buffering: 'ภาพสะดุด', blocked: 'แตะเพื่อเล่น', offline: 'ไม่มีสัญญาณ', unsupported: 'ไม่รองรับ', paused: 'พักการเชื่อมต่อ' };
+  const LABELS = { connecting: 'กำลังเชื่อมต่อ', live: 'กำลังเล่น', buffering: 'รอภาพ', blocked: 'แตะเพื่อเล่น', offline: 'สัญญาณขัดข้อง', unsupported: 'ไม่รองรับ', paused: 'พักการเชื่อมต่อ' };
   function create(tile, cam, { mode, src, onState = () => {}, Hls = globalThis.Hls, debug = false } = {}) {
     const video = tile.querySelector('video');
     let hls = null, destroyed = false, generation = 0, failures = 0;
@@ -22,11 +22,19 @@
       onState();
     }
     function clearDeadline() { clearTimeout(deadline); deadline = null; }
+    function recordProgress() {
+      if (destroyed || video.paused || !['live', 'buffering'].includes(tile.dataset.state) || video.currentTime <= lastTime) return;
+      lastTime = video.currentTime; lastProgress = Date.now();
+      // A stalled download can resume playback without another playing event.
+      // Cancel its deadline as soon as the media clock advances again.
+      clearDeadline(); failures = 0;
+      if (tile.dataset.state === 'buffering') set('live');
+    }
     function release() {
       generation++;
       clearTimeout(retryTimer); retryTimer = null;
       clearDeadline();
-      video.onplaying = video.onended = video.onerror = video.onwaiting = video.onstalled = video.onpause = null;
+      video.onplaying = video.onended = video.onerror = video.onwaiting = video.onstalled = video.onpause = video.ontimeupdate = null;
       if (hls) { hls.destroy(); hls = null; }
       video.pause();
       video.removeAttribute('src');
@@ -61,7 +69,8 @@
       lastTime = -1; lastProgress = Date.now();
       set('connecting');
       if (mode === 'none' || (mode === 'hls' && !Hls)) { set('unsupported'); return; }
-      video.onplaying = () => { if (destroyed) return; failures = 0; clearDeadline(); lastProgress = Date.now(); set('live'); };
+      video.onplaying = () => { if (destroyed) return; failures = 0; clearDeadline(); lastTime = video.currentTime; lastProgress = Date.now(); set('live'); };
+      video.ontimeupdate = recordProgress;
       video.onwaiting = video.onstalled = () => {
         if (destroyed || tile.dataset.state === 'blocked') return;
         if (tile.dataset.state === 'live') set('buffering');
@@ -94,8 +103,8 @@
     }
     const watchdog = setInterval(() => {
       if (destroyed || document.hidden || !['live', 'buffering'].includes(tile.dataset.state)) return;
-      if (video.currentTime !== lastTime) { lastTime = video.currentTime; lastProgress = Date.now(); }
-      else if (Date.now() - lastProgress >= 15000) retry(3000);
+      recordProgress();
+      if (Date.now() - lastProgress >= 15000) retry(3000);
     }, 5000);
     if (debug) {
       const seen = [];

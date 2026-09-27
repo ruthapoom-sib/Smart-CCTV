@@ -7,14 +7,15 @@ function setup(playResult = () => Promise.resolve()) {
   const timers = new Map();
   const video = {
     currentTime: 0, paused: false, muted: true,
-    play: playResult, pause() { this.paused = true; },
+    play() { this.paused = false; return playResult(); }, pause() { this.paused = true; },
     removeAttribute() {}, load() {}, addEventListener() {}, removeEventListener() {}
   };
-  const tile = { dataset: {}, isConnected: true, querySelector: s => s === 'video' ? video : s === '.msg' ? { textContent: '' } : null };
+  const message = { textContent: '' }, label = { textContent: '' };
+  const tile = { dataset: {}, isConnected: true, querySelector: s => s === 'video' ? video : s === '.msg' ? message : s === '.state-label' ? label : null };
   const context = vm.createContext({
     console, document: { hidden: false }, navigator: { onLine: true },
-    Date: { now: () => now }, setTimeout: (fn, ms) => { timers.set(++next, {fn, ms, repeat: false}); return next; },
-    setInterval: (fn, ms) => { timers.set(++next, {fn, ms, repeat: true}); return next; },
+    Date: { now: () => now }, setTimeout: (fn, ms) => { timers.set(++next, {fn, ms, due: now + ms, repeat: false}); return next; },
+    setInterval: (fn, ms) => { timers.set(++next, {fn, ms, due: now + ms, repeat: true}); return next; },
     clearTimeout: id => timers.delete(id), clearInterval: id => timers.delete(id),
     PLAYER: 'native', DEBUG: false, SRC: id => id, window: {},
   });
@@ -25,9 +26,17 @@ function setup(playResult = () => Promise.resolve()) {
   }
   const handle = context.CctvPlayer.create(tile, { id: '03' }, { mode: 'native', src: id => id });
   const stop = typeof handle === 'function' ? handle : () => handle.destroy();
-  return { tile, video, timers, stop, resume: () => handle.resume(), advance(ms) {
-    now += ms;
-    for (const [id, t] of [...timers]) if (t.ms <= ms) { if (!t.repeat) timers.delete(id); t.fn(); }
+  return { tile, video, message, label, timers, stop, resume: () => handle.resume(), advance(ms) {
+    const end = now + ms;
+    while (true) {
+      const nextTimer = [...timers].filter(([, t]) => t.due <= end).sort((a, b) => a[1].due - b[1].due)[0];
+      if (!nextTimer) break;
+      const [id, t] = nextTimer;
+      now = t.due;
+      if (t.repeat) t.due += t.ms; else timers.delete(id);
+      t.fn();
+    }
+    now = end;
   }};
 }
 test('destroy clears all video handlers and retry/watchdog timers', () => {
@@ -35,7 +44,56 @@ test('destroy clears all video handlers and retry/watchdog timers', () => {
   assert.equal(p.video.onplaying, null);
   assert.equal(p.video.onended, null);
   assert.equal(p.video.onerror, null);
+  assert.equal(p.video.ontimeupdate, null);
   assert.equal(p.timers.size, 0);
+});
+
+test('connection and brief buffering use caption status without text over footage', () => {
+  const p = setup();
+  assert.equal(p.message.textContent, '');
+  p.video.onplaying(); p.video.onwaiting();
+  assert.equal(p.tile.dataset.state, 'buffering');
+  assert.equal(p.label.textContent, 'รอภาพ');
+  assert.equal(p.message.textContent, '');
+  p.video.onplaying();
+  assert.equal(p.tile.dataset.state, 'live');
+  p.stop();
+});
+
+test('advancing video clears stale buffering and its connection deadline without another playing event', () => {
+  const p = setup();
+  p.video.onplaying(); p.video.onstalled();
+  for (let i = 1; i <= 6; i++) {
+    p.video.currentTime = i * 5;
+    p.advance(5000);
+    assert.equal(p.tile.dataset.state, 'live');
+  }
+  assert.equal(p.video.paused, false);
+  p.stop();
+});
+
+test('time updates restore live only when unpaused video actually advances', () => {
+  const p = setup();
+  p.video.onplaying(); p.video.onwaiting();
+  p.video.ontimeupdate?.();
+  assert.equal(p.tile.dataset.state, 'buffering');
+  p.video.paused = true; p.video.currentTime = 1; p.video.ontimeupdate?.();
+  assert.equal(p.tile.dataset.state, 'buffering');
+  p.video.paused = false; p.video.ontimeupdate?.();
+  assert.equal(p.tile.dataset.state, 'live');
+  p.stop();
+});
+
+test('prolonged frozen video reports a caption fault and retries automatically', () => {
+  const p = setup();
+  p.video.onplaying(); p.video.onwaiting();
+  p.advance(15000);
+  assert.equal(p.tile.dataset.state, 'offline');
+  assert.equal(p.label.textContent, 'สัญญาณขัดข้อง');
+  assert.equal(p.message.textContent, '');
+  p.advance(3000);
+  assert.equal(p.tile.dataset.state, 'connecting');
+  p.stop();
 });
 test('late autoplay rejection cannot mutate a destroyed player', async () => {
   let reject;

@@ -2,7 +2,19 @@
 
 Date: 2026-09-27. Scope: the local working tree, before any production deployment.
 
-## Final visual-pass validation
+## Resumed-work final verification
+
+Rechecked the pending quiet-buffering changes on 2026-09-27: `npm run check` passed all 16 Node tests; `npm run test:browser` passed all 40 Chromium checks; `git diff --check` passed. The live run at 11:04:37 UTC (18:04:37 Bangkok) confirmed all four desktop cameras advancing with no uncaught page errors. Reviewed the refreshed desktop and phone screenshots and rebuilt the nine-file `dist/` package with `npm run build`. Local follow-up is complete; production deployment and physical-device validation remain unverified.
+
+## Quiet buffering update
+
+Approved follow-up: transient buffering now uses a steady amber dot and “รอภาพ” in the caption. Connecting, buffering and offline states no longer put text over the footage; buffering no longer dims it. Persistent failures use “สัญญาณขัดข้อง” below the image and continue automatic retries. The autoplay permission prompt remains available over the image when a tap is required.
+
+Reproduced a stale recovery deadline: after a stalled event, video time could advance without a new playing event, leaving the buffering state and deadline active. Media-time updates and the watchdog now clear that deadline when unpaused video advances. Frozen video still times out and retries; player disposal clears the additional event handler. This prevents the reproduced unnecessary reconnect, but does not eliminate interruptions at the public stream source.
+
+Verification after this change: 16 Node tests and 40 Chromium checks pass, including unobscured buffering, recovery without another playing event, persistent freeze/retry and cleanup. Live smoke test at 10:57:18 UTC (17:57:18 Bangkok) recorded all four desktop videos advancing with zero uncaught page errors. Rebuilt the nine-file deployment package successfully. Not deployed.
+
+## Earlier visual-pass validation
 
 Revalidated the latest `index.html` and `styles.css` after the second visual pass on 2026-09-27. The syntax checks and all 12 Node tests pass; all 39 Chromium checks pass with zero uncaught page errors. The live run completed at 10:49:55 UTC (17:49:55 Bangkok): all four desktop cameras (03, 05, 06, 01) were live with advancing video time and no uncaught page errors.
 
@@ -22,8 +34,8 @@ Local implementation and packaging are complete. Production deployment and physi
 
 | Check | Result |
 |---|---|
-| `npm run check` | Pass: JavaScript syntax checks and 12 Node regression tests |
-| `npm run test:browser` | Pass: 39 Chromium checks, zero uncaught page errors |
+| `npm run check` | Pass: JavaScript syntax checks and 16 Node regression tests |
+| `npm run test:browser` | Pass: 40 Chromium checks, zero uncaught page errors |
 | `npm run test:live` | Pass: actual ITIC video time advances; see timestamped JSON below |
 | `npm run build` | Pass: nine allowlisted files in `dist/` |
 | Rebuild with stale output | Pass: stale fixture removed; resulting application matches source |
