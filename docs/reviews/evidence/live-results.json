@@ -1,0 +1,23 @@
+{
+  "at": "2026-09-27T10:49:55.853Z",
+  "advancing": 4,
+  "visibleDesktopCameras": [
+    {
+      "id": "03",
+      "state": "live"
+    },
+    {
+      "id": "05",
+      "state": "live"
+    },
+    {
+      "id": "06",
+      "state": "live"
+    },
+    {
+      "id": "01",
+      "state": "live"
+    }
+  ],
+  "errors": []
+}
