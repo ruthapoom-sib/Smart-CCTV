@@ -31,6 +31,21 @@ class RainSettings:
     ])
 
 
+import shutil
+
+def resolve_ffmpeg() -> str:
+    configured = os.getenv('RAIN_FFMPEG') or os.getenv('FLOOD_FFMPEG')
+    if configured:
+        return configured
+    if shutil.which('ffmpeg'):
+        return 'ffmpeg'
+    try:
+        from imageio_ffmpeg import get_ffmpeg_exe
+        return get_ffmpeg_exe()
+    except ImportError:
+        return 'ffmpeg'
+
+
 def load_settings() -> RainSettings:
     db_env = os.getenv('RAIN_DB_PATH')
     ev_env = os.getenv('RAIN_EVIDENCE_ROOT')
@@ -47,6 +62,7 @@ def load_settings() -> RainSettings:
         evidence_root=Path(ev_env) if ev_env else Path('runtime/rain/evidence'),
         admin_token=token,
         cors_origins=origins,
+        ffmpeg_path=resolve_ffmpeg(),
     )
 
 
