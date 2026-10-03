@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
-    "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs",
+    "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs tests/camera-export.test.cjs",
     "test:browser": "node tests/browser.cjs",
     "test:live": "node tests/live.cjs",
     "check": "node --check scripts/data.js && node --check scripts/core.js && node --check scripts/player.js && node --check scripts/app.js && npm test"

@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 .superpowers/
 .playwright-mcp/
 .vercel/
+runtime/flood/
+backend/.venv/
+__pycache__/
+.pytest_cache/
