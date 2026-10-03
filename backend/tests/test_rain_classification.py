@@ -111,3 +111,11 @@ def test_effective_freshness():
     future = effective(r, now=990.0, max_age=180.0)
     assert future.status == 'unknown'
     assert future.reason == 'invalid_timestamp'
+
+
+def test_custom_freshness_resets_confirmation():
+    seq = RainSequence(status='rainy',high_count=3,last_captured_at=100,config_revision=1,detector_revision='v1')
+    seq, reading = advance(seq,RawClassification('rainy',score=.8),191,189,192,'03',1,'v1',
+        RainThresholds(),max_age=90)
+    assert seq.high_count == 1
+    assert reading.status == 'unknown' and reading.reason == 'confirming_rain'

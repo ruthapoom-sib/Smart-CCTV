@@ -56,7 +56,7 @@ class RainWorker:
         self.catalog = catalog if catalog is not None else load_catalog(settings.catalog_path)
         self.catalog_map = {c.id: c for c in self.catalog}
         self.stop_event = stop_event or threading.Event()
-        self.store = RainStore(settings.db_path, self.catalog)
+        self.store = RainStore(settings.db_path, self.catalog, fresh_age=settings.fresh_age_seconds)
         self.evidence_store = RainEvidenceStore(settings.evidence_root)
         self.detector = RainDetector()
         self.supervisor = DetectorSupervisor(settings.detector_timeout_seconds)
@@ -131,6 +131,7 @@ class RainWorker:
             detector_revision=self.detector.revision,
             thresholds=cfg.thresholds,
             evidence_id=evidence_id,
+            max_age=self.settings.fresh_age_seconds,
         )
 
         first_det = new_seq.first_rain_at if new_seq.status == 'rainy' else None

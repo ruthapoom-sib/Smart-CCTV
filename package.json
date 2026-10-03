@@ -5,6 +5,9 @@
   "description": "Static public traffic camera viewer for Chachoengsao",
   "scripts": {
     "start": "node tools/serve.cjs",
+    "detect:start": "node tools/detection.cjs start",
+    "detect:stop": "node tools/detection.cjs stop",
+    "detect:status": "node tools/detection.cjs status",
     "build": "node tools/build.cjs",
     "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs tests/camera-export.test.cjs tests/flood-core.test.cjs tests/flood-client.test.cjs tests/rain-core.test.cjs tests/rain-client.test.cjs",
     "test:flood-browser": "node tests/flood-browser.cjs",

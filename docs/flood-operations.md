@@ -40,6 +40,17 @@ Open `http://127.0.0.1:8000/#analyst`. Enter the token only in the ROI dialog. S
 
 ## Docker
 
+When Hugging Face TLS is unavailable, use the reviewed original [Microsoft checkpoint](https://github.com/microsoft/unilm/tree/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/beit) and MIT license:
+
+```powershell
+curl.exe -fL https://github.com/addf400/files/releases/download/v1.0/beit_base_patch16_640_pt22k_ft22ktoade20k.pth -o runtime/flood/beit-source.pth
+curl.exe -fL https://raw.githubusercontent.com/microsoft/unilm/31c5b904ca1bf2afb4c234a6675c683a4e5fc7cd/LICENSE -o runtime/flood/BEIT-LICENSE
+backend/.venv/Scripts/python.exe tools/convert-beit-model.py --checkpoint runtime/flood/beit-source.pth --license runtime/flood/BEIT-LICENSE
+npm.cmd run detect:start
+```
+
+The converter requires the reviewed artifact hash and loads every learned tensor strictly. It saves local safetensors plus an explicit original-source manifest; it does not claim the original artifact is a Hugging Face Hub revision.
+
 Copy `.env.flood.example` to ignored `.env.flood`, add the private token and actual frontend origins. Create `runtime/flood`; on Linux grant container UID 10001 write permission to this directory. Download the model explicitly before starting, or run the preparation CLI as a one-off container command with the same mount.
 
 ```sh

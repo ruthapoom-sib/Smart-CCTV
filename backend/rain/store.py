@@ -12,7 +12,8 @@ from .geometry import validate_roi
 
 
 class RainStore:
-    def __init__(self, db_path: Path, catalog):
+    def __init__(self, db_path: Path, catalog, fresh_age=180.0):
+        self.fresh_age = fresh_age
         self.catalog = {c.id: c for c in catalog}
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -112,7 +113,7 @@ class RainStore:
         first_dry_at: float | None = None,
     ) -> bool:
         self._known(reading.camera_id)
-        reading = effective(reading, reading.processed_at)
+        reading = effective(reading, reading.processed_at, self.fresh_age)
         with self.lock, self.db:
             self.db.execute('BEGIN IMMEDIATE')
             config = self.get_config(reading.camera_id)
@@ -140,7 +141,7 @@ class RainStore:
                 (reading.camera_id,)
             ).fetchone()
 
-            gap = prior and (reading.captured_at - prior.captured_at > 180.0)
+            gap = prior and (reading.captured_at - prior.captured_at > self.fresh_age)
             if event and (gap or reading.status in ('unknown', 'unconfigured')):
                 self.db.execute(
                     "UPDATE rain_events SET ended_at=?, end_reason='data_gap' WHERE id=?",
@@ -203,7 +204,7 @@ class RainStore:
                         reason='awaiting_analysis',
                         config_revision=cfg.revision,
                     )
-                out.append(effective(r, now))
+                out.append(effective(r, now, self.fresh_age))
         return out
 
     def _ids(self, ids: list[str]) -> tuple[list[str], str]:
@@ -277,7 +278,7 @@ class RainStore:
         with self.lock:
             rows = self.db.execute(
                 f'SELECT data FROM rain_observations WHERE camera_id IN ({marks}) AND captured_at>=? AND captured_at<=? ORDER BY captured_at, id',
-                (*unique_ids, start - 180.0, end)
+                (*unique_ids, start - self.fresh_age, end)
             ).fetchall()
         return [RainReading(**json.loads(r['data'])) for r in rows]
 
@@ -308,7 +309,7 @@ class RainStore:
                 end_reason='data_gap' WHERE ended_at IS NULL AND (
                     SELECT MAX(captured_at) FROM rain_observations WHERE rain_observations.camera_id=rain_events.camera_id
                 )<?
-            ''', (now - 180.0,))
+            ''', (now - self.fresh_age,))
 
     def prune(self, now: float, observation_days: int = 30) -> int:
         self.expire_events(now)

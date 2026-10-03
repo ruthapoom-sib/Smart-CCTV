@@ -109,3 +109,17 @@ def test_rain_store_data_gap_ends_event(tmp_path, catalog):
     assert events[0].end_reason == 'data_gap'
 
     store.close()
+
+
+def test_configured_freshness_controls_latest_and_event_expiry(tmp_path, catalog):
+    store = RainStore(tmp_path/'rain.sqlite3', catalog, fresh_age=90)
+    roi = [(0.1,0.1),(0.9,0.1),(0.9,0.9),(0.1,0.9)]
+    cfg = store.save_config(RainConfig('03',roi=roi,enabled=True),0)
+    try:
+        store.record(RainReading('03',100,98,101,status='rainy',raw_status='rainy',
+            detector_score=.8,config_revision=cfg.revision),cfg.revision)
+        assert store.latest(191)[0].status == 'unknown'
+        event = store.events(['03'],0,500,now=191).items[0]
+        assert event.ended_at == 100 and event.end_reason == 'data_gap'
+    finally:
+        store.close()

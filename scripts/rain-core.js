@@ -18,12 +18,13 @@ globalThis.CctvRainCore = (() => {
       return reading;
     }
     const now = nowMs / 1000;
+    const maxAge = Number.isFinite(reading.fresh_age_seconds) && reading.fresh_age_seconds > 0 ? reading.fresh_age_seconds : 180;
     const age = now - (reading.captured_at || 0);
-    if (!Number.isFinite(age) || age < 0 || age > 180) {
+    if (!Number.isFinite(age) || age < 0 || age > maxAge) {
       return {
         ...reading,
         status: 'unknown',
-        reason: age > 180 ? 'ข้อมูลเก่าเกิน 3 นาที' : 'เวลาไม่ถูกต้อง',
+        reason: age > maxAge ? 'ข้อมูลเก่าเกินช่วงเวลาที่กำหนด' : 'เวลาไม่ถูกต้อง',
         detector_score: null,
       };
     }

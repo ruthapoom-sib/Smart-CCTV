@@ -33,7 +33,7 @@ def create_app(settings):
     catalog = load_catalog(settings.catalog_path); by_id={c.id:c for c in catalog}
     store = Store(settings.runtime/'flood.sqlite3', catalog); evidence=EvidenceStore(settings.runtime/'evidence')
     rain_settings = load_rain_settings()
-    rain_store = RainStore(rain_settings.db_path, catalog)
+    rain_store = RainStore(rain_settings.db_path, catalog, fresh_age=rain_settings.fresh_age_seconds)
     rain_evidence = RainEvidenceStore(rain_settings.evidence_root)
     snapshots = settings.runtime/'snapshots'; snapshots.mkdir(parents=True, exist_ok=True)
     capture_slots = threading.BoundedSemaphore(2)

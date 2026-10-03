@@ -24,6 +24,10 @@ npm start
 
 Open **http://127.0.0.1:8000**. Set `PORT` to use another port. Live streams require internet access.
 
+After installing the backend dependencies and verified model, `npm run detect:start` starts the API, flood worker, rain worker and viewer together in the background. `npm run detect:status` checks the supervisor; `npm run detect:stop` stops its processes. The private ROI token is in ignored `runtime/detection/admin-token.txt`.
+
+The current online viewer connects to the local detection host through an HTTPS Quick Tunnel. The Windows machine, detectors and tunnel must remain running. This is a temporary online connection; restarting the tunnel changes its URL and requires updating both public config files and redeploying. Use a persistent backend or named tunnel for unattended operation.
+
 For real camera segmentation and persisted results, start the separate Python API and worker using [flood operations](docs/flood-operations.md). Static Vercel hosting alone cannot run analysis; configure a persistent backend with pretrained model files and reviewed camera ROIs. See [validation and remaining prerequisites](docs/reviews/2026-10-03-flood-validation.md).
 
 ## Test

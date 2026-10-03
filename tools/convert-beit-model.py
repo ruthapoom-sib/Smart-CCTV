@@ -46,7 +46,16 @@ def main():
     config = BeitConfig(image_size=640, num_labels=150, use_relative_position_bias=True,
         out_indices=[3,5,7,11], id2label=labels, label2id={v:k for k,v in labels.items()})
     model = BeitForSemanticSegmentation(config).eval()
-    model.load_state_dict(convert_state_dict(checkpoint['state_dict'], config), strict=True)
+    state = convert_state_dict(checkpoint['state_dict'], config)
+    # Transformers now computes these indices instead of persisting them. Verify
+    # equality before dropping only these non-learned buffers; keep strict loading.
+    for key in list(state):
+        if key.endswith('.relative_position_index'):
+            module = model.get_submodule(key.rsplit('.', 1)[0])
+            generated = module.generate_relative_position_index(module.window_size)
+            if not torch.equal(state.pop(key), generated):
+                raise ValueError('Relative position indices differ from the original checkpoint')
+    model.load_state_dict(state, strict=True)
     args.output.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(args.output, safe_serialization=True)
     BeitImageProcessor(size=640, do_center_crop=False).save_pretrained(args.output)
