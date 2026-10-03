@@ -1,0 +1,7 @@
+{
+  "model_id": "microsoft/beit-base-finetuned-ade-640-640",
+  "revision": "REPLACED_WITH_FULL_HUB_COMMIT_BY_PREPARATION",
+  "license": "apache-2.0",
+  "files": {},
+  "note": "Example only. Run tools/prepare-flood-model.py. Production rejects this placeholder."
+}
