@@ -12,6 +12,7 @@
     "test:browser": "node tests/browser.cjs",
     "test:live": "node tests/live.cjs",
     "check": "node tools/check-syntax.cjs && npm test",
+    "api": "python -m uvicorn backend.flood.api:app --host 127.0.0.1 --port 8100",
     "flood:api": "python -m uvicorn backend.flood.api:app --host 127.0.0.1 --port 8100",
     "flood:worker": "python -m backend.flood.worker",
     "rain:worker": "python -m backend.rain.worker"
