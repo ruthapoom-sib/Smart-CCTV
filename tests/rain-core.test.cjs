@@ -45,3 +45,10 @@ test('rain-core effective freshness and gap', () => {
   const unconf = core.effective({ status: 'unconfigured' }, now * 1000);
   assert.equal(unconf.status, 'unconfigured');
 });
+
+test('rain-core uses the freshness supplied by the API', () => {
+  const core = loadCore();
+  const reading = {status:'rainy',captured_at:100,detector_score:.8,fresh_age_seconds:90};
+  assert.equal(core.effective(reading,191000).status,'unknown');
+  assert.equal(core.effective({...reading,fresh_age_seconds:300},291000).status,'rainy');
+});

@@ -102,7 +102,7 @@ def create_rain_router(
                     'id': c.id,
                     'name': c.name,
                     'groups': c.groups,
-                    'reading': asdict(latest[c.id]),
+                    'reading': {**asdict(latest[c.id]), 'fresh_age_seconds': settings.fresh_age_seconds},
                 }
                 for c in catalog
             ],
@@ -245,7 +245,7 @@ def create_rain_router(
 
 def create_rain_app(settings: RainSettings, catalog: list[Camera] | None = None) -> FastAPI:
     cam_catalog = catalog if catalog is not None else load_catalog(settings.catalog_path)
-    store = RainStore(settings.db_path, cam_catalog)
+    store = RainStore(settings.db_path, cam_catalog, fresh_age=settings.fresh_age_seconds)
     evidence = RainEvidenceStore(settings.evidence_root)
 
     @asynccontextmanager

@@ -7,6 +7,24 @@ from backend.rain.settings import RainSettings
 from backend.rain.store import RainStore
 
 
+class HungDetector:
+    def analyze(self, *args):
+        time.sleep(60)
+
+
+def test_detector_timeout_reaps_child():
+    from backend.rain.supervision import DetectorSupervisor, DetectorError
+    supervisor = DetectorSupervisor(timeout=.2, detector_factory=HungDetector)
+    started = time.monotonic()
+    try:
+        with pytest.raises(DetectorError, match='detector_timeout'):
+            supervisor.analyze([], [], None)
+        assert time.monotonic() - started < 5
+        assert supervisor.process is None
+    finally:
+        supervisor.close()
+
+
 @pytest.fixture
 def catalog():
     return [
@@ -74,3 +92,30 @@ def test_worker_one_cycle(tmp_path, catalog, monkeypatch):
     assert health is not None
     assert health['available'] is True
     s.close()
+    worker.close()
+
+
+def test_disabled_cameras_do_not_delay_enabled_camera(tmp_path, monkeypatch):
+    from backend.rain.contracts import RainConfig
+    cams = [Camera(str(i).zfill(2), str(i), 'https://example.com/clip', [0]) for i in range(1, 6)]
+    settings = RainSettings(db_path=tmp_path/'rain.sqlite3', evidence_root=tmp_path/'evidence')
+    worker = RainWorker(settings, catalog=cams)
+    worker.store.save_config(RainConfig('01', roi=[(.1,.1),(.9,.1),(.9,.9),(.1,.9)], enabled=True), 0)
+    processed = []
+    monkeypatch.setattr(worker, 'process_camera', lambda camera: processed.append(camera.id))
+    try:
+        worker.run_cycle(time.time(), 100)
+        assert processed == ['01']
+    finally:
+        worker.close()
+
+
+def test_heartbeat_updates_while_waiting_for_next_capture(tmp_path, catalog):
+    settings = RainSettings(db_path=tmp_path/'rain.sqlite3', evidence_root=tmp_path/'evidence')
+    worker = RainWorker(settings, catalog=catalog)
+    try:
+        worker.run_cycle(1000, 100)
+        worker.run_cycle(1020, 120)
+        assert worker.store.get_health('worker_heartbeat')['timestamp'] == 1020
+    finally:
+        worker.close()

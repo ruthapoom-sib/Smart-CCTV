@@ -36,11 +36,12 @@ def advance(
     thresholds: RainThresholds,
     source_at: float | None = None,
     evidence_id: str | None = None,
+    max_age: float = 180.0,
 ) -> tuple[RainSequence, RainReading]:
     # Check if sequence must be reset due to gap or revision mismatch
     if sequence.last_captured_at is not None:
         gap = captured_at - sequence.last_captured_at
-        if gap <= 0 or gap > 180.0 or sequence.config_revision != config_revision or sequence.detector_revision != detector_revision:
+        if gap <= 0 or gap > max_age or sequence.config_revision != config_revision or sequence.detector_revision != detector_revision:
             sequence = RainSequence()
 
     if raw.raw_status == 'unknown':

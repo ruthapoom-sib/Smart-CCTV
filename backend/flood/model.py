@@ -9,6 +9,29 @@ WATER_NAMES = {'water', 'river', 'sea', 'lake'}
 MODEL_ID = 'microsoft/beit-base-finetuned-ade-640-640'
 class ModelError(RuntimeError): pass
 
+
+def load_verified_manifest(path):
+    path = Path(path)
+    manifest = json.loads((path / 'manifest.json').read_text('utf-8'))
+    licensed_models = {MODEL_ID:'apache-2.0', 'microsoft/unilm/beit-base-ade20k':'mit'}
+    if manifest.get('model_id') not in licensed_models or not re.fullmatch('[0-9a-f]{40}', manifest.get('revision','')):
+        raise ValueError('Unreviewed model')
+    if manifest.get('license') != licensed_models[manifest['model_id']] or not manifest.get('files'):
+        raise ValueError('Unreviewed license')
+    if manifest['model_id'] == 'microsoft/unilm/beit-base-ade20k':
+        if manifest.get('source_sha256') != '95bba2fea9f5f6e09293463d128d0f9958642c32605f8161f234cd85923be11a':
+            raise ValueError('Unreviewed checkpoint')
+    for name, expected in manifest['files'].items():
+        candidate = (path / name).resolve()
+        if not candidate.is_relative_to(path.resolve()) or not candidate.is_file():
+            raise ValueError('Missing model file')
+        with candidate.open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != expected:
+                raise ValueError('Model hash mismatch')
+    if not any(n.endswith('.safetensors') for n in manifest['files']):
+        raise ValueError('Safe weights required')
+    return manifest
+
 def validate_image(image):
     pixels = np.asarray(image.convert('RGB'), dtype=np.float32)
     if pixels.mean() < 5 or pixels.std() < 2:
@@ -30,14 +53,7 @@ class Segmenter:
     def __init__(self, model_path: Path, device='cpu'):
         path = Path(model_path)
         try:
-            self.manifest = json.loads((path / 'manifest.json').read_text('utf-8'))
-            if self.manifest['model_id'] != MODEL_ID or not re.fullmatch('[0-9a-f]{40}', self.manifest['revision']): raise ValueError()
-            if self.manifest['license'] != 'apache-2.0' or not self.manifest['files']: raise ValueError()
-            for name, digest in self.manifest['files'].items():
-                candidate = (path / name).resolve()
-                if not candidate.is_relative_to(path.resolve()) or not candidate.is_file(): raise ValueError()
-                if hashlib.sha256(candidate.read_bytes()).hexdigest() != digest: raise ValueError()
-            if not any(n.endswith('.safetensors') for n in self.manifest['files']): raise ValueError()
+            self.manifest = load_verified_manifest(path)
             from transformers import AutoImageProcessor, AutoModelForSemanticSegmentation
             import torch
             self.processor = AutoImageProcessor.from_pretrained(path, local_files_only=True, trust_remote_code=False)

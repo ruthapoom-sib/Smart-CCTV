@@ -5,6 +5,7 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r backend/requirements.txt
 COPY backend /app/backend
 COPY tools/prepare-flood-model.py /app/tools/prepare-flood-model.py
+COPY tools/convert-beit-model.py /app/tools/convert-beit-model.py
 RUN useradd --uid 10001 --create-home flood && mkdir -p /app/runtime/flood && chown -R flood:flood /app/runtime
 USER flood
 ENV FLOOD_RUNTIME=/app/runtime/flood FLOOD_MODEL_PATH=/app/runtime/flood/models

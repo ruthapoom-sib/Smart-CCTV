@@ -5,7 +5,7 @@ services:
       dockerfile: backend/Dockerfile
     command: [python, -m, uvicorn, backend.flood.api:app, --host, 0.0.0.0, --port, "8100"]
     ports: ["127.0.0.1:8100:8100"]
-    volumes: ["./runtime/flood:/app/runtime/flood"]
+    volumes: ["./runtime/flood:/app/runtime/flood", "./runtime/rain:/app/runtime/rain"]
     environment:
       FLOOD_ADMIN_TOKEN: ${FLOOD_ADMIN_TOKEN:-}
       FLOOD_ORIGINS: ${FLOOD_ORIGINS:-http://127.0.0.1:8000,http://localhost:8000}
@@ -15,8 +15,17 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     command: [python, -m, backend.flood.worker]
-    volumes: ["./runtime/flood:/app/runtime/flood"]
+    volumes: ["./runtime/flood:/app/runtime/flood", "./runtime/rain:/app/runtime/rain"]
     environment:
       FLOOD_INTERVAL: ${FLOOD_INTERVAL:-60}
       FLOOD_DEVICE: cpu
+    restart: unless-stopped
+  rain-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: [python, -m, backend.rain.worker]
+    volumes: ["./runtime/rain:/app/runtime/rain"]
+    environment:
+      RAIN_CADENCE_SECONDS: ${RAIN_CADENCE_SECONDS:-60}
     restart: unless-stopped

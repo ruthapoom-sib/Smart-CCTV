@@ -4,12 +4,14 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from .contracts import Camera
 
+ROOT = Path(__file__).resolve().parents[2]
+
 
 @dataclass(frozen=True)
 class RainSettings:
-    db_path: Path = Path('runtime/rain/rain.sqlite3')
-    evidence_root: Path = Path('runtime/rain/evidence')
-    catalog_path: Path = Path('backend/cameras.json')
+    db_path: Path = ROOT / 'runtime/rain/rain.sqlite3'
+    evidence_root: Path = ROOT / 'runtime/rain/evidence'
+    catalog_path: Path = ROOT / 'backend/cameras.json'
     target_interval_seconds: float = 60.0
     fresh_age_seconds: float = 180.0
     observation_days: int = 30
@@ -47,19 +49,31 @@ def resolve_ffmpeg() -> str:
 
 
 def load_settings() -> RainSettings:
+    runtime = Path(os.getenv('RAIN_RUNTIME', str(ROOT / 'runtime/rain'))).resolve()
     db_env = os.getenv('RAIN_DB_PATH')
     ev_env = os.getenv('RAIN_EVIDENCE_ROOT')
     token = os.getenv('RAIN_ADMIN_TOKEN') or os.getenv('FLOOD_ADMIN_TOKEN')
-    origins_env = os.getenv('RAIN_CORS_ORIGINS') or os.getenv('FLOOD_CORS_ORIGINS')
+    origins_env = os.getenv('RAIN_CORS_ORIGINS') or os.getenv('FLOOD_ORIGINS') or os.getenv('FLOOD_CORS_ORIGINS')
     origins = [o.strip() for o in origins_env.split(',') if o.strip()] if origins_env else [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:8080',
         'http://127.0.0.1:8080',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
     ]
     return RainSettings(
-        db_path=Path(db_env) if db_env else Path('runtime/rain/rain.sqlite3'),
-        evidence_root=Path(ev_env) if ev_env else Path('runtime/rain/evidence'),
+        db_path=Path(db_env).resolve() if db_env else runtime / 'rain.sqlite3',
+        evidence_root=Path(ev_env).resolve() if ev_env else runtime / 'evidence',
+        target_interval_seconds=float(os.getenv('RAIN_CADENCE_SECONDS', '60')),
+        fresh_age_seconds=float(os.getenv('RAIN_FRESHNESS_SECONDS', '180')),
+        observation_days=int(os.getenv('RAIN_OBSERVATION_DAYS', '30')),
+        evidence_days=int(os.getenv('RAIN_EVIDENCE_DAYS', '7')),
+        capture_timeout_seconds=float(os.getenv('RAIN_CAPTURE_TIMEOUT_SECONDS', '20')),
+        detector_timeout_seconds=float(os.getenv('RAIN_DETECTOR_TIMEOUT_SECONDS', '10')),
+        capture_concurrency=int(os.getenv('RAIN_CAPTURE_MAX_CONCURRENCY', '2')),
+        detector_concurrency=int(os.getenv('RAIN_DETECTOR_MAX_CONCURRENCY', '1')),
+        max_queue_depth=int(os.getenv('RAIN_MAX_QUEUE_DEPTH', '2')),
         admin_token=token,
         cors_origins=origins,
         ffmpeg_path=resolve_ffmpeg(),
