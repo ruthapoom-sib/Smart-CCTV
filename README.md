@@ -10,6 +10,8 @@ A responsive live traffic camera viewer for Chachoengsao, Thailand, covering **4
 - Mobile swipe navigation and an all-camera overview.
 - Camera order follows the original intersection list; expanded navigation moves one camera at a time and layout changes preserve the current position.
 - Automatic rotation, playback status, and stream recovery.
+- Separate **Analysis** navigation for water status, historical charts, events and per-camera road ROI setup.
+- All-camera overview uses readable scrolling tiles and at most nine visible streams.
 - Mint and navy SVG logo combining a camera lens and city skyline, used in the header and favicon.
 
 ## Run locally
@@ -21,6 +23,8 @@ npm start
 ```
 
 Open **http://127.0.0.1:8000**. Set `PORT` to use another port. Live streams require internet access.
+
+For real camera segmentation and persisted results, start the separate Python API and worker using [flood operations](docs/flood-operations.md). Static Vercel hosting alone cannot run analysis; configure a persistent backend with pretrained model files and reviewed camera ROIs. See [validation and remaining prerequisites](docs/reviews/2026-10-03-flood-validation.md).
 
 ## Test
 

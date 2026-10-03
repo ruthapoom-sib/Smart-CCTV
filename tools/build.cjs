@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const files = ['index.html', 'styles.css', 'assets/favicon.svg', 'scripts/data.js', 'scripts/core.js', 'scripts/player.js', 'scripts/app.js', 'vendor/hls-1.7.3.min.js', 'vendor/hls-LICENSE'];
+const files = require('./public-files.cjs');
 const output = path.join(fs.realpathSync(root), 'dist');
 // Fail before touching anything if an output path was replaced with a link.
 // Every recursive removal is restricted to this resolved in-repository directory.

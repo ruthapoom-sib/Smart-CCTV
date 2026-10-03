@@ -6,10 +6,13 @@
   "scripts": {
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
-    "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs",
+    "test": "node --test tests/core.test.cjs tests/player.test.cjs tests/packaging.test.cjs tests/camera-export.test.cjs tests/flood-core.test.cjs tests/flood-client.test.cjs",
+    "test:flood-browser": "node tests/flood-browser.cjs",
     "test:browser": "node tests/browser.cjs",
     "test:live": "node tests/live.cjs",
-    "check": "node --check scripts/data.js && node --check scripts/core.js && node --check scripts/player.js && node --check scripts/app.js && npm test"
+    "check": "node tools/check-syntax.cjs && npm test",
+    "flood:api": "python -m uvicorn backend.flood.api:app --host 127.0.0.1 --port 8100",
+    "flood:worker": "python -m backend.flood.worker"
   },
   "devDependencies": { "playwright": "1.63.0" },
   "engines": { "node": ">=20" }

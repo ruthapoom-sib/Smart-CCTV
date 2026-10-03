@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "cameras": [
+    {
+      "id": "03",
+      "name": "มุ่งหน้าชลบุรี",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs03.m3u8",
+      "groups": [
+        0
+      ]
+    },
+    {
+      "id": "05",
+      "name": "มุ่งหน้าเมืองฉะเชิงเทรา",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs05.m3u8",
+      "groups": [
+        0
+      ]
+    },
+    {
+      "id": "06",
+      "name": "ถ.เทพคุณากร",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs06.m3u8",
+      "groups": [
+        0
+      ]
+    },
+    {
+      "id": "01",
+      "name": "มุ่งหน้าถนนสิริโสธร",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs01.m3u8",
+      "groups": [
+        1
+      ]
+    },
+    {
+      "id": "00",
+      "name": "มุ่งหน้าวัดโสธรฯ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs00.m3u8",
+      "groups": [
+        1
+      ]
+    },
+    {
+      "id": "02",
+      "name": "มุ่งหน้าวัดบางพระ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs02.m3u8",
+      "groups": [
+        1
+      ]
+    },
+    {
+      "id": "22",
+      "name": "โค้งหน้าวัดโสธรวรารามฯ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs22.m3u8",
+      "groups": [
+        2
+      ]
+    },
+    {
+      "id": "23",
+      "name": "หน้าวัดโสธรวรารามฯ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs23.m3u8",
+      "groups": [
+        2
+      ]
+    },
+    {
+      "id": "24",
+      "name": "หน้า รร.วัดโสธรวรารามฯ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs24.m3u8",
+      "groups": [
+        2
+      ]
+    },
+    {
+      "id": "25",
+      "name": "ซ.เทพคุณากร 5",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs25.m3u8",
+      "groups": [
+        2
+      ]
+    },
+    {
+      "id": "09",
+      "name": "มุ่งหน้า ถ.ศรีโสธร",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs09.m3u8",
+      "groups": [
+        3
+      ]
+    },
+    {
+      "id": "08",
+      "name": "หน้าอนุสาวรีย์",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs08.m3u8",
+      "groups": [
+        3
+      ]
+    },
+    {
+      "id": "07",
+      "name": "มุ่งหน้า ถ.เทพคุณากร",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs07.m3u8",
+      "groups": [
+        3
+      ]
+    },
+    {
+      "id": "12",
+      "name": "มุ่งหน้า ถ.ศรีโสธรตัดใหม่",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs12.m3u8",
+      "groups": [
+        3
+      ]
+    },
+    {
+      "id": "13",
+      "name": "หน้าบิ๊กซี 2 (มุ่งหน้าวงเวียน)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs13.m3u8",
+      "groups": [
+        4,
+        5
+      ]
+    },
+    {
+      "id": "14",
+      "name": "หน้าบิ๊กซี 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs14.m3u8",
+      "groups": [
+        4,
+        5
+      ]
+    },
+    {
+      "id": "28",
+      "name": "ถ.ประชาสรรค์",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs28.m3u8",
+      "groups": [
+        4
+      ]
+    },
+    {
+      "id": "29",
+      "name": "ศรีโสธรตัดใหม่ 15",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs29.m3u8",
+      "groups": [
+        4
+      ]
+    },
+    {
+      "id": "26",
+      "name": "ศรีโสธรตัดใหม่ 18 (มุมที่ 1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs26.m3u8",
+      "groups": [
+        4
+      ]
+    },
+    {
+      "id": "27",
+      "name": "ศรีโสธรตัดใหม่ 18 (มุมที่ 2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs27.m3u8",
+      "groups": [
+        4
+      ]
+    },
+    {
+      "id": "15",
+      "name": "มุ่งหน้า ถ.มหาจักรพรรดิ์",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs15.m3u8",
+      "groups": [
+        5
+      ]
+    },
+    {
+      "id": "16",
+      "name": "มุ่งหน้าวงเวียน",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs16.m3u8",
+      "groups": [
+        5
+      ]
+    },
+    {
+      "id": "30",
+      "name": "สามแยก ถ.หน้าเมือง",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs30.m3u8",
+      "groups": [
+        6
+      ]
+    },
+    {
+      "id": "42",
+      "name": "ศาลากลางจังหวัดฉะเชิงเทรา",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs42.m3u8",
+      "groups": [
+        6
+      ]
+    },
+    {
+      "id": "19",
+      "name": "ถ.เอมอรอุทิศ 1 (จุดที่ 1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs19.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "31",
+      "name": "ถ.เอมอรอุทิศ 1 (จุดที่ 2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs31.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "17",
+      "name": "ถ.เอมอรอุทิศ 2 (มุ่งหน้า ถ.มหาจักรพรรดิ์)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs17.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "18",
+      "name": "ถ.เอมอรอุทิศ 2 (มุ่งหน้าวงเวียน)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs18.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "34",
+      "name": "ศรีโสธรตัดใหม่ 4/1 (มุมที่ 1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs34.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "35",
+      "name": "ศรีโสธรตัดใหม่ 4/1 (มุมที่ 2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs35.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "32",
+      "name": "ศรีโสธรตัดใหม่ 5 (มุมที่ 1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs32.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "33",
+      "name": "ศรีโสธรตัดใหม่ 5 (มุมที่ 2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs33.m3u8",
+      "groups": [
+        7
+      ]
+    },
+    {
+      "id": "20",
+      "name": "มุ่งหน้ากรุงเทพฯ",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs20.m3u8",
+      "groups": [
+        8
+      ]
+    },
+    {
+      "id": "21",
+      "name": "มุ่งหน้าเข้าเมืองฉะเชิงเทรา",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs21.m3u8",
+      "groups": [
+        8
+      ]
+    },
+    {
+      "id": "36",
+      "name": "กลางทางแยก (1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs36.m3u8",
+      "groups": [
+        8
+      ]
+    },
+    {
+      "id": "37",
+      "name": "กลางทางแยก (2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs37.m3u8",
+      "groups": [
+        8
+      ]
+    },
+    {
+      "id": "38",
+      "name": "สามแยกเทศบาล (1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs38.m3u8",
+      "groups": [
+        9
+      ]
+    },
+    {
+      "id": "39",
+      "name": "สามแยกเทศบาล (2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs39.m3u8",
+      "groups": [
+        9
+      ]
+    },
+    {
+      "id": "40",
+      "name": "หน้า รร.เทพประสิทธิ์วิทยา (1)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs40.m3u8",
+      "groups": [
+        9
+      ]
+    },
+    {
+      "id": "41",
+      "name": "หน้า รร.เทพประสิทธิ์วิทยา (2)",
+      "stream_url": "https://camerai1.iticfoundation.org/hls/ccs41.m3u8",
+      "groups": [
+        9
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": 0,
+      "name": "สามแยกเทพคุณากร – สิริโสธร"
+    },
+    {
+      "id": 1,
+      "name": "สามแยกเทพคุณากร – วัดบางพระ"
+    },
+    {
+      "id": 2,
+      "name": "วัดโสธรวรารามวรวิหาร – ถ.เทพคุณากร"
+    },
+    {
+      "id": 3,
+      "name": "วงเวียนอนุสาวรีย์พระยาศรีสุนทรโวหาร"
+    },
+    {
+      "id": 4,
+      "name": "ทางแยก–ทางร่วม ถ.ศรีโสธรตัดใหม่"
+    },
+    {
+      "id": 5,
+      "name": "สามแยก ถ.พระยาศรีสุนทร – ถ.ศรีโสธรตัดใหม่"
+    },
+    {
+      "id": 6,
+      "name": "สามแยกหน้าเมือง – ศาลากลางจังหวัด"
+    },
+    {
+      "id": 7,
+      "name": "ถ.ศรีโสธรตัดใหม่ – ถ.เอมอรอุทิศ"
+    },
+    {
+      "id": 8,
+      "name": "สามแยกศรีโสธรตัดใหม่ – มหาจักรพรรดิ์"
+    },
+    {
+      "id": 9,
+      "name": "เทศบาลเมืองฯ – มหาจักรพรรดิ์"
+    }
+  ]
+}

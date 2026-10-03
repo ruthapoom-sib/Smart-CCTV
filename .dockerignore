@@ -1,0 +1,12 @@
+.git
+.superpowers
+.claude
+.codex
+.agents
+node_modules
+runtime
+backend/.venv
+**/__pycache__
+.env
+.env.*
+dist

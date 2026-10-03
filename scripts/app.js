@@ -13,10 +13,11 @@
   const mode = pickPlayer({ ua: navigator.userAgent, touch: navigator.maxTouchPoints || 0,
     hls: !!globalThis.Hls?.isSupported(), native: !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl'), force: params.get('player') });
   const players = new Map(), visible = new Set();
+  let activeView = !location.hash.startsWith('#analyst');
   let observer = null, tiles = [], filtered = [], pageCount = 0, due = 0;
   let searchTimer, toastTimer, resizeTimer, statusQueued = false, storageWarned = false;
   const swipe = () => mobile.matches && state.size !== 'all';
-  const canPlay = () => !document.hidden && navigator.onLine;
+  const canPlay = () => activeView && !document.hidden && navigator.onLine;
   function currentCameraId() {
     return state.focus || (grid.classList.contains('swipe') ? tiles[state.page] : tiles[0])?.cam.id;
   }
@@ -74,8 +75,10 @@
     action.hidden = swipe() && !['blocked', 'offline'].includes(status);
   }
   function reconcilePlayers() {
+    const allowed = new Set(tiles.filter(tile => visible.has(tile) && (!state.focus || tile.cam.id === state.focus))
+      .slice(0, state.size === 'all' ? 9 : tiles.length));
     for (const tile of tiles) {
-      const show = canPlay() && visible.has(tile) && (!state.focus || tile.cam.id === state.focus);
+      const show = canPlay() && allowed.has(tile);
       if (show && !players.has(tile)) {
         players.set(tile, CctvPlayer.create(tile, tile.cam, { mode, src: SRC, onState: () => { syncTileAction(tile); queueStatus(); }, debug: params.has('debug') }));
       } else if (!show) stopTile(tile);
@@ -165,6 +168,7 @@
     grid.classList.remove('has-focus');
     grid.classList.toggle('swipe', swipe());
     grid.classList.toggle('mall', mobile.matches && state.size === 'all');
+    grid.classList.toggle('all-view', !mobile.matches && state.size === 'all');
     tiles = (mobile.matches ? filtered : pages[state.page] || []).map(tileFor);
     grid.replaceChildren(...tiles);
     grid.hidden = !filtered.length;
@@ -177,12 +181,13 @@
     layout();
     if (swipe()) scrollToCurrent(); else grid.scrollLeft = 0;
     updateFavoriteButtons(); sync(); observeTiles(); resetTimer();
+    document.dispatchEvent(new CustomEvent('cctv:tiles-rendered'));
   }
   function layout() {
     if (mobile.matches || !tiles.length) return;
     let dimensions;
     if (state.size === 'all') {
-      dimensions = fit(tiles.length, grid.clientWidth, grid.clientHeight, tiles[0]?.querySelector('.caption').offsetHeight || 60);
+      dimensions = [Math.max(1, Math.min(4, Math.floor((grid.clientWidth + 14) / 254))), 1];
     } else {
       // Filtering down to one camera should use the available workspace.
       const side = Math.ceil(Math.sqrt(Math.min(state.size, tiles.length)));
@@ -240,6 +245,7 @@
     tile.querySelector('.camera-open').focus({ preventScroll: true });
   }
   function tick() {
+    if (!activeView) return;
     const now = new Date();
     $('clock').textContent = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour12: false });
     $('clock').dateTime = now.toISOString();
@@ -291,6 +297,7 @@
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) $('help-dialog').close();
   }});
   document.addEventListener('keydown', event => {
+    if (!activeView || document.querySelector('dialog[open]')) return;
     if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.target.closest('input, select, textarea, [contenteditable="true"]') || $('help-dialog').open) return;
     const onButton = event.target.closest('button, [role="button"]');
     if ((event.code === 'Space' && !onButton) || event.key === 'MediaPlayPause') { event.preventDefault(); $('auto').click(); }
@@ -313,6 +320,13 @@
   });
   addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { layout(); if (swipe()) scrollToCurrent(); }, 120); });
   if ('ResizeObserver' in window) new ResizeObserver(() => layout()).observe(grid);
+  globalThis.CctvWall = {
+    setActive(active) {
+      activeView = active;
+      if (!active) { state.auto = false; observer?.disconnect(); [...players.keys()].forEach(stopTile); sync(); }
+      else { layout(); observeTiles(); resetTimer(); }
+    }
+  };
   render(); visibilityChanged(); tick(); setInterval(tick, 250);
   // Diagnostics are explicit; regular visits never add an overlay.
   if (location.hash === '#test') {
