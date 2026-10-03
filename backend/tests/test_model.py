@@ -21,6 +21,12 @@ def test_empty_labels_and_nan_are_rejected():
     with pytest.raises(ModelError, match='invalid_logits'):
         semantic_prediction(torch.full((1,1,2,2), float('nan')), {0:'water'}, (2,2), .5, 'm', 'r')
 
+def test_grouped_probability_alone_cannot_label_road_as_water():
+    import torch
+    logits=torch.tensor([[[[.7]],[[0.]],[[0.]]]])
+    p=semantic_prediction(logits,{0:'road',1:'water',2:'river'},(1,1),.4,'m','r')
+    assert p.water_prob[0,0]>.4 and not p.water_mask[0,0]
+
 def test_dark_and_blank_images_unknown():
     for color in [(0,0,0), (100,100,100)]:
         with pytest.raises(ModelError, match='image_quality'): validate_image(Image.new('RGB', (32,32), color))

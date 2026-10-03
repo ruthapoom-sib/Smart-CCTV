@@ -20,6 +20,8 @@
   <script defer src="scripts/flood-client.js"></script>
   <script defer src="scripts/app.js"></script>
   <script defer src="scripts/flood-ui.js"></script>
+  <script defer src="scripts/analyst.js"></script>
+  <script defer src="scripts/roi-editor.js"></script>
   <script defer src="scripts/navigation.js"></script>
 </head>
 <body>
@@ -64,7 +66,24 @@
   <div id="empty" class="empty" hidden><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><h3 id="empty-title">ไม่พบกล้องที่ค้นหา</h3><p id="empty-description">ลองเปลี่ยนคำค้นหาหรือเลือกทางแยกอื่น</p><button id="reset-filters">แสดงกล้องทั้งหมด</button></div>
   <div class="playback-bar"><p id="page" aria-live="polite"></p><div class="tour-progress" aria-hidden="true"><i id="progress"></i></div><div class="playback-controls"><button id="prev" class="icon-button" aria-label="ก่อนหน้า" title="ก่อนหน้า (←)"><svg class="ico"><use href="#i-left"/></svg></button><button id="auto" aria-pressed="false" title="วนอัตโนมัติ (Space)"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><span>วนอัตโนมัติ</span></button><button id="next" class="icon-button" aria-label="ถัดไป" title="ถัดไป (→)"><svg class="ico"><use href="#i-right"/></svg></button><select id="interval" aria-label="เวลาต่อหน้า"><option value="10">10 วินาที</option><option value="15">15 วินาที</option><option value="30">30 วินาที</option><option value="60">1 นาที</option></select></div></div>
 </main>
-<main id="analyst" class="analyst" hidden tabindex="-1"><h2>Analysis · น้ำท่วม</h2><p>กำลังอ่านข้อมูลย้อนหลัง…</p></main>
+<main id="analyst" class="analyst" hidden tabindex="-1">
+  <div class="analysis-heading"><div><p class="eyebrow">CAMERA WATER MONITORING</p><h2>Analysis · น้ำท่วม</h2><p id="analysis-monitored" class="muted"></p></div><button id="analysis-refresh">อ่านใหม่</button></div>
+  <div class="analysis-filters">
+    <label>ทางแยก<select id="analysis-group"><option value="">ทุกทางแยก</option></select></label>
+    <label>กล้อง<select id="analysis-camera"><option value="">ทุกกล้อง</option></select></label>
+    <label>ช่วงเวลา<select id="analysis-range"><option value="1h">1 ชั่วโมง</option><option value="24h" selected>24 ชั่วโมง</option><option value="7d">7 วัน</option><option value="30d">30 วัน</option></select></label>
+    <button id="analysis-config" disabled>ตั้งพื้นที่เฝ้าระวัง</button>
+  </div>
+  <p id="analysis-message" class="muted" role="status">กำลังอ่านข้อมูล…</p><p id="analysis-error" class="notice" role="alert" hidden></p>
+  <div class="analysis-summary" aria-label="สถานะล่าสุด"><div><strong id="summary-active">—</strong><span>พบน้ำสูง</span></div><div><strong id="summary-suspect">—</strong><span>เฝ้าระวัง</span></div><div><strong id="summary-clear">—</strong><span>น้ำต่ำกว่าเกณฑ์</span></div><div><strong id="summary-unknown">—</strong><span>วิเคราะห์ไม่ได้</span></div><div><strong id="summary-unconfigured">—</strong><span>ยังไม่ตั้งพื้นที่</span></div></div>
+  <section class="analysis-section"><h3>จำนวนกล้องตามสถานะ</h3><p class="muted">ใช้ผลล่าสุดที่ไม่เก่าเกิน 180 วินาที ณ ปลายแต่ละช่วง</p><div class="chart-legend"><span class="legend-active">พบน้ำสูง</span><span class="legend-suspect">เฝ้าระวัง</span><span class="legend-unknown">ไม่มีผลที่ใช้ได้</span></div><div id="count-chart" class="chart"></div><p id="analysis-span" class="muted"></p></section>
+  <p id="analysis-empty" class="notice" hidden>ยังไม่มีผลวิเคราะห์ที่ใช้ได้ในช่วงนี้ · ไม่ได้หมายความว่าไม่มีน้ำท่วม</p>
+  <p id="coverage-select" class="coverage-select">เลือกกล้องหนึ่งตัวเพื่อดูกราฟสัดส่วนพื้นที่น้ำ</p>
+  <section id="coverage-section" class="analysis-section" hidden><h3>สัดส่วนพื้นที่น้ำ (%)</h3><p class="muted">ค่าเฉลี่ยและค่าสูงสุดของผลที่ใช้ได้ภายในแต่ละช่วง · ช่องว่างคือไม่มีผล ไม่ใช่ 0%</p><div class="chart-legend"><span class="legend-water">ค่าเฉลี่ย</span><span class="legend-max">ค่าสูงสุด</span></div><div id="coverage-chart" class="chart"></div></section>
+  <details class="analysis-section"><summary>ตารางข้อมูลกราฟ</summary><div class="table-scroll"><table><caption>ค่าของช่วงเวลาเดียวกับกราฟด้านบน</caption><thead><tr><th>ปลายช่วง (เวลาไทย)</th><th>น้ำสูง</th><th>เฝ้าระวัง</th><th>ผลใช้ได้</th><th>ไม่มีผล</th><th>น้ำเฉลี่ย</th><th>น้ำสูงสุด</th></tr></thead><tbody id="analysis-buckets"></tbody></table></div></details>
+  <section class="analysis-section"><div class="section-heading"><h3>ผลล่าสุดรายกล้อง</h3><label>สถานะ<select id="analysis-status"><option value="">ทุกสถานะ</option><option value="active">พบน้ำสูง</option><option value="suspect">เฝ้าระวัง</option><option value="clear">น้ำต่ำกว่าเกณฑ์</option><option value="unknown">วิเคราะห์ไม่ได้</option><option value="unconfigured">ยังไม่ตั้งพื้นที่</option></select></label></div><div class="table-scroll"><table><thead><tr><th>กล้อง</th><th>สถานะ</th><th>พื้นที่น้ำ</th><th>เวลาที่อ่านภาพ</th></tr></thead><tbody id="analysis-latest"></tbody></table></div></section>
+  <section class="analysis-section"><h3>เหตุการณ์น้ำสูง</h3><p class="muted">เริ่มเมื่อยืนยันต่อเนื่องตามเกณฑ์ · ภาพหลักฐานเก็บ 7 วัน</p><div class="table-scroll"><table><thead><tr><th>กล้อง</th><th>เริ่ม</th><th>สิ้นสุด</th><th>พื้นที่น้ำสูงสุด</th><th>เหตุผล / หลักฐาน</th></tr></thead><tbody id="analysis-events"></tbody></table></div><p id="events-empty" class="muted" hidden>ไม่มีเหตุการณ์ที่บันทึกในช่วงนี้</p><button id="events-more" hidden>อ่านเหตุการณ์เพิ่มเติม</button></section>
+</main>
 <footer class="site-footer"><p>ภาพจาก <a href="https://live.iticfoundation.org/" target="_blank" rel="noopener noreferrer">ITIC</a> · ภาพอาจล่าช้าหรือขาดช่วงตามสัญญาณต้นทาง</p><p>ออกแบบและพัฒนาโดย <a href="https://github.com/ruthapoom-sib/Smart-CCTV" target="_blank" rel="noopener noreferrer">Ruthapoom Sib</a> <span>© 2026</span></p></footer>
 <template id="tile-tpl">
   <article class="tile" data-state="paused">
@@ -78,6 +97,15 @@
   </article>
 </template>
 <dialog id="flood-detail" aria-labelledby="flood-detail-title"><div class="dialog-heading"><h2 id="flood-detail-title">ผลตรวจน้ำ</h2><button id="close-flood-detail" aria-label="ปิดรายละเอียด">ปิด</button></div><p id="flood-detail-copy" class="reading-copy"></p><p class="muted">ค่าความน่าจะเป็นน้ำจากโมเดล ไม่ใช่ความแม่นยำของการตรวจน้ำท่วม</p><img id="flood-detail-image" class="evidence-image" alt="ภาพกล้องพร้อมพื้นที่น้ำที่โมเดลตรวจพบ" hidden><p id="flood-detail-evidence"></p><div class="dialog-actions"><button id="flood-detail-history">ดูประวัติใน Analysis</button><button id="flood-detail-config">ตั้งพื้นที่เฝ้าระวัง</button></div></dialog>
+<dialog id="event-evidence" aria-labelledby="event-evidence-title"><div class="dialog-heading"><h2 id="event-evidence-title">หลักฐานเหตุการณ์</h2><button id="close-event-evidence">ปิด</button></div><p id="event-evidence-message" role="status"></p><img id="event-evidence-image" class="evidence-image" alt="หลักฐานกล้องพร้อมพื้นที่น้ำที่โมเดลพบ" hidden></dialog>
+<dialog id="roi-dialog" aria-labelledby="roi-title"><div class="dialog-heading"><h2 id="roi-title">พื้นที่เฝ้าระวัง</h2><button id="close-roi">ปิด</button></div>
+  <p id="roi-message" role="status"></p><div class="roi-auth"><label>Admin token<input id="roi-token" type="password" autocomplete="off" spellcheck="false" placeholder="สำหรับอ่านภาพและบันทึก"></label><button id="roi-capture">อ่านภาพกล้อง</button></div>
+  <div id="roi-stage" hidden><svg id="roi-svg" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="คลิกจุดรอบพื้นที่เฝ้าระวัง หรือกรอกพิกัดในช่องด้านล่าง"><image id="roi-image" width="640" height="360"/><polygon id="roi-polygon"/></svg></div>
+  <div class="dialog-actions"><button id="roi-undo">ยกเลิกจุดล่าสุด</button><button id="roi-reset">ล้างพื้นที่</button><button id="roi-reload">โหลดค่าที่บันทึก</button></div><p id="roi-validation" class="muted"></p>
+  <label class="roi-coordinates">พิกัดพื้นที่ x, y (0–1 · หนึ่งจุดต่อบรรทัด)<textarea id="roi-coordinates" rows="4" spellcheck="false" placeholder="0.2, 0.3&#10;0.8, 0.3&#10;0.8, 0.9&#10;0.2, 0.9"></textarea></label>
+  <div class="roi-thresholds"><label>ความน่าจะเป็นต่อพิกเซล<input id="roi-pixel" type="number" min="0.01" max="1" step="0.01" value="0.5"></label><label>เฝ้าระวัง (%)<input id="roi-suspect" type="number" min="0.1" max="99.9" step="0.1" value="5"></label><label>น้ำสูง (%)<input id="roi-active" type="number" min="0.2" max="100" step="0.1" value="15"></label><label>จำนวนผลต่อเนื่อง<input id="roi-confirm" type="number" min="1" max="20" step="1" value="3"></label></div>
+  <label class="roi-enabled"><input id="roi-enabled" type="checkbox"> เปิดเฝ้าระวังกล้องนี้</label><p class="muted">เลือกพื้นที่ถนนที่ต้องการตรวจ ควรหลีกเลี่ยงแม่น้ำ คลอง และแหล่งน้ำถาวร</p><div class="dialog-actions"><button id="roi-save" disabled>บันทึกพื้นที่และเกณฑ์</button></div>
+</dialog>
 <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><h2 id="help-title">ดูกล้องได้ในไม่กี่แตะ</h2><button id="close-help" class="icon-button" aria-label="ปิดวิธีใช้งาน"><svg class="ico"><use href="#i-close"/></svg></button></div><p>ค้นหาชื่อถนน ทางแยก หรือรหัสกล้อง เช่น ccs03 แล้วกดดาวเพื่อเก็บกล้องที่ใช้บ่อยไว้ในเครื่องนี้</p><ul><li><strong>มือถือ:</strong> ปัดซ้าย–ขวาเพื่อเปลี่ยนกล้อง หรือเลือก “ทั้งหมด” เพื่อดูรายการ</li><li><strong>คอมพิวเตอร์:</strong> เลือกจำนวนจอ แล้วคลิกภาพเพื่อขยาย</li><li><strong>ภาพไม่ขึ้น:</strong> แตะภาพหากขึ้น “แตะเพื่อเล่น” หรือลองปุ่มเชื่อมต่อใหม่</li></ul><dl class="shortcuts"><div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>เปลี่ยนหน้า</dd></div><div><dt><kbd>Space</kbd></dt><dd>เปิด / ปิดวนอัตโนมัติ</dd></div><div><dt><kbd>F</kbd></dt><dd>เต็มจอ</dd></div><div><dt><kbd>Esc</kbd></dt><dd>กลับจากภาพขยาย</dd></div></dl><p class="help-note">“กำลังเล่น” หมายถึงตัวเล่นบนจอนี้กำลังเล่นวิดีโอ ภาพอาจล่าช้าจากเหตุการณ์จริง เว็บนี้ไม่มีภาพย้อนหลัง</p></dialog>
 <div id="toast" class="toast" role="status" hidden></div>
 <noscript><div class="no-script">กรุณาเปิด JavaScript เพื่อดูกล้องจราจร หรือ <a href="https://sites.google.com/view/ccs-cctv">เปิดเว็บไซต์กล้องต้นทาง</a></div></noscript>

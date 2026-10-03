@@ -20,8 +20,11 @@ def semantic_prediction(logits, labels, size, pixel_score, model_id, revision):
     if not indices: raise ModelError('water_labels_missing')
     if logits.ndim != 4 or not torch.isfinite(logits).all(): raise ModelError('invalid_logits')
     restored = torch.nn.functional.interpolate(logits.float(), size=(size[1], size[0]), mode='bilinear', align_corners=False)
-    probs = restored.softmax(1)[0, indices].sum(0).clamp(0, 1).cpu().numpy()
-    return Prediction(probs >= pixel_score, probs, model_id, revision)
+    probabilities = restored.softmax(1)
+    probs = probabilities[0, indices].sum(0).clamp(0, 1).cpu().numpy()
+    winner = probabilities[0].argmax(0)
+    water_class = torch.isin(winner, torch.tensor(indices, device=winner.device)).cpu().numpy()
+    return Prediction(water_class & (probs >= pixel_score), probs, model_id, revision)
 
 class Segmenter:
     def __init__(self, model_path: Path, device='cpu'):
