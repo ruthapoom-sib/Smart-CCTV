@@ -6,3 +6,8 @@
 node_modules
 docs
 tests
+backend
+runtime
+.env*
+compose.flood.yaml
+.dockerignore
