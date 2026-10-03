@@ -17,6 +17,10 @@ from .contracts import CameraConfig, Thresholds
 from .evidence import EvidenceStore
 from .settings import load_settings, load_catalog
 from .store import Store
+from backend.rain.api import create_rain_router
+from backend.rain.settings import load_settings as load_rain_settings
+from backend.rain.store import RainStore
+from backend.rain.evidence import RainEvidenceStore
 
 class ConfigInput(BaseModel):
     model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
@@ -28,14 +32,20 @@ class ConfigInput(BaseModel):
 def create_app(settings):
     catalog = load_catalog(settings.catalog_path); by_id={c.id:c for c in catalog}
     store = Store(settings.runtime/'flood.sqlite3', catalog); evidence=EvidenceStore(settings.runtime/'evidence')
+    rain_settings = load_rain_settings()
+    rain_store = RainStore(rain_settings.db_path, catalog)
+    rain_evidence = RainEvidenceStore(rain_settings.evidence_root)
     snapshots = settings.runtime/'snapshots'; snapshots.mkdir(parents=True, exist_ok=True)
     capture_slots = threading.BoundedSemaphore(2)
     @asynccontextmanager
     async def lifespan(app):
         yield
         store.close()
+        rain_store.close()
     app = FastAPI(title='CCTV flood observations', lifespan=lifespan)
     app.state.store = store
+    app.state.rain_store = rain_store
+    app.include_router(create_rain_router(rain_settings, rain_store, rain_evidence, catalog))
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.origins), allow_methods=['GET','POST','PUT'],
         allow_headers=['Authorization','Content-Type'])
     @app.middleware('http')
