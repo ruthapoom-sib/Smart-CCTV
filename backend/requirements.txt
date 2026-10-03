@@ -6,3 +6,5 @@ torch==2.13.0
 transformers==4.57.6
 huggingface-hub==0.36.2
 safetensors==0.7.0
+scipy==1.17.1
+imageio-ffmpeg==0.6.0

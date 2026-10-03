@@ -13,6 +13,7 @@ from .detector import RainDetector
 from .evidence import RainEvidenceStore
 from .settings import RainSettings, load_settings, load_catalog
 from .store import RainStore
+from .supervision import DetectorSupervisor, DetectorError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger('rain_worker')
@@ -58,6 +59,7 @@ class RainWorker:
         self.store = RainStore(settings.db_path, self.catalog)
         self.evidence_store = RainEvidenceStore(settings.evidence_root)
         self.detector = RainDetector()
+        self.supervisor = DetectorSupervisor(settings.detector_timeout_seconds)
         self.scheduler = RainScheduler(
             [c.id for c in self.catalog],
             interval=settings.target_interval_seconds,
@@ -98,10 +100,10 @@ class RainWorker:
             captured_at = clip.captured_at
             rep_frame = clip.frames[len(clip.frames) // 2]
             try:
-                raw, composite_mask = self.detector.analyze(clip.frames, cfg.roi, cfg.thresholds)
+                raw, composite_mask = self.supervisor.analyze(clip.frames, cfg.roi, cfg.thresholds)
             except Exception as exc:
                 logger.error(f"Camera {camera.id} detector error: {exc}")
-                raw = RawClassification(raw_status='unknown', reason=f'detector_error: {exc}')
+                raw = RawClassification(raw_status='unknown', reason=str(exc) if isinstance(exc, DetectorError) else 'detector_failed')
                 composite_mask = None
 
         processed_at = time.time()
@@ -130,22 +132,32 @@ class RainWorker:
             thresholds=cfg.thresholds,
             evidence_id=evidence_id,
         )
-        self.sequences[camera.id] = new_seq
 
         first_det = new_seq.first_rain_at if new_seq.status == 'rainy' else None
         first_dry = new_seq.first_dry_at if new_seq.status == 'dry' else None
 
-        self.store.record(
+        accepted = self.store.record(
             reading=reading,
             expected_revision=cfg.revision,
             first_detected_at=first_det,
             first_dry_at=first_dry,
         )
+        if accepted:
+            self.sequences[camera.id] = new_seq
+        else:
+            self.sequences.pop(camera.id, None)
 
     def run_cycle(self, now: float, now_mono: float):
+        self.store.set_health('worker_heartbeat', {
+            'available': True,
+            'timestamp': now,
+            'target_interval_seconds': self.settings.target_interval_seconds,
+            'fresh_age_seconds': self.settings.fresh_age_seconds,
+        })
+        self.store.expire_events(now)
+        self.scheduler.camera_ids = [c.id for c in self.catalog
+            if (cfg := self.store.get_config(c.id)).enabled and cfg.roi]
         due_cids = self.scheduler.due(now_mono)
-        if not due_cids:
-            return
 
         with ThreadPoolExecutor(max_workers=self.settings.capture_concurrency) as executor:
             futures = []
@@ -189,6 +201,8 @@ class RainWorker:
         logger.info("Rain worker stopped.")
 
     def close(self):
+        self.supervisor.close()
+        self.store.set_health('worker_heartbeat', {'available': False, 'timestamp': time.time()})
         self.store.close()
 
 
@@ -211,7 +225,11 @@ def main():
     try:
         if args.once:
             logger.info("Running single worker cycle...")
-            worker.run_cycle(time.time(), time.monotonic())
+            for _ in range(max(1, len(worker.catalog))):
+                worker.run_cycle(time.time(), time.monotonic())
+                configured = [c.id for c in worker.catalog if worker.store.get_config(c.id).enabled]
+                if all(cid in worker.scheduler.last_completed for cid in configured):
+                    break
         else:
             worker.run()
     finally:

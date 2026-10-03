@@ -149,6 +149,8 @@ vite.config.ts.timestamp-*
 .playwright-mcp/
 .vercel/
 runtime/flood/
+runtime/rain/
+runtime/detection/
 backend/.venv/
 __pycache__/
 .pytest_cache/
