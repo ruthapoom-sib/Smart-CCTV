@@ -20,3 +20,19 @@ test('API failure invalidates status and authorization is only in headers', asyn
   assert.equal(captured.options.headers.Authorization,'Bearer private');
   assert.equal(captured.url.includes('private'),false);
 });
+test('deadline includes a response body that never arrives', async () => {
+  const client=create({baseUrl:'https://api.local',timeoutMs:20,fetchImpl:async()=>({ok:true,
+    headers:{get:()=> 'application/json'},json:()=>new Promise(()=>{})})});
+  const result=await Promise.race([client.request('/api/flood/cameras').then(r=>r.json()).then(()=> 'unexpected',()=> 'timeout'),
+    new Promise(resolve=>setTimeout(()=>resolve('hung'),150))]);
+  assert.equal(result,'timeout');
+});
+test('caller cancellation remains connected while consuming the body', async () => {
+  let fetchSignal,headersArrived;
+  const headers=new Promise(resolve=>{headersArrived=resolve;});
+  const client=create({baseUrl:'https://api.local',fetchImpl:async(_,options)=>{
+    fetchSignal=options.signal;headersArrived();return {ok:true,headers:{get:()=> 'application/json'},json:()=>new Promise(()=>{})};
+  }});
+  const abort=new AbortController(),request=client.request('/api/flood/cameras',{signal:abort.signal});
+  await headers;abort.abort();await assert.rejects(request,/request_cancelled/);assert(fetchSignal.aborted);
+});

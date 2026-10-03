@@ -2,6 +2,7 @@ globalThis.CctvAnalyst=(()=>{
   const $=id=>document.getElementById(id), core=CctvFloodCore, SVG='http://www.w3.org/2000/svg';
   const ranges={'1h':[3600,60],'24h':[86400,300],'7d':[604800,1800],'30d':[2592000,3600]};
   let client, route, controller, generation=0, latest=[], eventCursor=null, eventRange;
+  let evidenceController, evidenceGeneration=0;
   function node(name,attrs={},text) {const el=document.createElementNS(SVG,name);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));if(text!==undefined)el.textContent=text;return el;}
   function cell(row,value,tag='td') {const el=document.createElement(tag);el.textContent=value;row.append(el);return el;}
   function chart(root,buckets,series,max,yLabel) {
@@ -39,10 +40,11 @@ globalThis.CctvAnalyst=(()=>{
     $('analysis-empty').hidden=buckets.some(b=>b.valid_count>0)||count>0;
   }
   async function evidence(ident) {
+    evidenceController?.abort();evidenceController=new AbortController();const current=++evidenceGeneration;
     const dialog=$('event-evidence');$('event-evidence-message').textContent='กำลังอ่านหลักฐาน…';$('event-evidence-image').hidden=true;dialog.showModal();
-    try {const response=await client.request(`/api/flood/evidence/${encodeURIComponent(ident)}?kind=overlay`);const url=URL.createObjectURL(await response.blob());
-      if(!dialog.open){URL.revokeObjectURL(url);return;}const image=$('event-evidence-image');if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);image.dataset.objectUrl=url;image.src=url;image.hidden=false;$('event-evidence-message').textContent='หลักฐานตอนเปลี่ยนสถานะ';
-    }catch(error){$('event-evidence-message').textContent=error.message.includes('410')?'ภาพหลักฐานหมดอายุแล้ว':'อ่านภาพหลักฐานไม่ได้';}
+    try {const response=await client.request(`/api/flood/evidence/${encodeURIComponent(ident)}?kind=overlay`,{signal:evidenceController.signal});const url=URL.createObjectURL(await response.blob());
+      if(!dialog.open||current!==evidenceGeneration){URL.revokeObjectURL(url);return;}const image=$('event-evidence-image');if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);image.dataset.objectUrl=url;image.src=url;image.hidden=false;$('event-evidence-message').textContent='หลักฐานตอนเปลี่ยนสถานะ';
+    }catch(error){if(dialog.open&&current===evidenceGeneration)$('event-evidence-message').textContent=error.message.includes('410')?'ภาพหลักฐานหมดอายุแล้ว':'อ่านภาพหลักฐานไม่ได้';}
   }
   function renderEvents(data,append=false) {
     if(!append)$('analysis-events').replaceChildren();
@@ -76,7 +78,7 @@ globalThis.CctvAnalyst=(()=>{
     $('events-more').onclick=async()=>{const current=generation;const query=new URLSearchParams(eventRange);query.set('cursor',eventCursor);$('events-more').disabled=true;
       try{const result=await client.request('/api/flood/events?'+query,{signal:controller.signal}).then(r=>r.json());if(current===generation)renderEvents(result,true);}catch(error){if(current===generation){$('analysis-error').hidden=false;$('analysis-error').textContent='อ่านเหตุการณ์เพิ่มเติมไม่ได้';}}finally{$('events-more').disabled=false;}};
     $('analysis-config').onclick=()=>{if(route.cameraId)CctvRoiEditor.open(route.cameraId);};
-    $('close-event-evidence').onclick=()=>$('event-evidence').close();$('event-evidence').addEventListener('close',()=>{const image=$('event-evidence-image');if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);delete image.dataset.objectUrl;image.removeAttribute('src');});
+    $('close-event-evidence').onclick=()=>{evidenceGeneration++;evidenceController?.abort();$('event-evidence').close();};$('event-evidence').addEventListener('close',()=>{if($('event-evidence').open)return;evidenceGeneration++;evidenceController?.abort();const image=$('event-evidence-image');if(image.dataset.objectUrl)URL.revokeObjectURL(image.dataset.objectUrl);delete image.dataset.objectUrl;image.removeAttribute('src');});
     document.addEventListener('cctv:view-changed',event=>{controller?.abort();generation++;route=event.detail;if(route.view!=='analyst')return;
       $('analysis-camera').value=route.cameraId||'';$('analysis-group').value=route.groupId??'';$('analysis-range').value=route.range;
       $('analysis-config').disabled=!route.cameraId;load();});

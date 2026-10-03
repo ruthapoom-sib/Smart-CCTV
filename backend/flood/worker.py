@@ -47,21 +47,32 @@ class InferenceSupervisor:
         self.path, self.device, self.timeout = model_path, device, timeout
         self.process = None; self.connection = None
     def predict(self, capture, pixel_score):
+        started = time.monotonic()
         if self.process is None:
             context = mp.get_context('spawn'); parent, child = context.Pipe()
             self.connection = parent
             self.process = context.Process(target=_model_child, args=(child, self.path, self.device), daemon=True)
             self.process.start(); child.close()
-        try:
-            self.connection.send((capture.image, pixel_score))
-            if not self.connection.poll(self.timeout): raise ModelError('inference_timeout')
-            status, value = self.connection.recv()
-            if status != 'ok': raise ModelError(value)
-            return value
-        except (EOFError, BrokenPipeError, OSError):
-            self.close(); raise ModelError('model_unavailable')
-        except ModelError:
-            self.close(); raise
+        # Pipe send and complete recv can both block, even after poll says readable.
+        # Keep transport off the supervisor thread so its deadline can kill/reap the child.
+        connection = self.connection; done = threading.Event(); outcome = {}
+        def transact():
+            try:
+                connection.send((capture.image, pixel_score))
+                outcome['response'] = connection.recv()
+            except (EOFError, BrokenPipeError, OSError): outcome['error'] = 'model_unavailable'
+            finally: done.set()
+        transport = threading.Thread(target=transact, daemon=True); transport.start()
+        if not done.wait(max(0, self.timeout-(time.monotonic()-started))):
+            self.close(); transport.join(timeout=5); raise ModelError('inference_timeout')
+        transport.join()
+        if 'error' in outcome:
+            self.close(); raise ModelError(outcome['error'])
+        status, value = outcome['response']
+        if status != 'ok':
+            if value != 'image_quality': self.close()
+            raise ModelError(value)
+        return value
     def close(self):
         if self.process:
             if self.process.is_alive(): self.process.terminate()
@@ -98,6 +109,8 @@ def run_worker(settings, stop_event, once=False):
     executor = ThreadPoolExecutor(max_workers=2)
     try:
         while not stop_event.is_set():
+            if time.monotonic()-pruned > 3600:
+                store.prune(time.time(), settings.observation_days); evidence.prune(time.time(), settings.evidence_days); pruned=time.monotonic()
             for ident in scheduler.due(time.monotonic()):
                 config = store.get_config(ident)
                 if not config.enabled or not config.roi or (once and ident in finished):
@@ -132,8 +145,6 @@ def run_worker(settings, stop_event, once=False):
             if len(finished)==len(catalog):
                 store.set_health('last_cycle_seconds', time.monotonic()-cycle_started)
                 if not once: finished.clear(); cycle_started=time.monotonic()
-            if time.monotonic()-pruned > 3600:
-                store.prune(time.time(), settings.observation_days); evidence.prune(time.time(), settings.evidence_days); pruned=time.monotonic()
     finally:
         supervisor.close(); executor.shutdown(wait=True, cancel_futures=True)
         store.set_health('worker', {'heartbeat':time.time(), 'state':'stopped', 'queue_depth':0}); store.close()

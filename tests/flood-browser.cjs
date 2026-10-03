@@ -24,7 +24,7 @@ const fs=require('node:fs');
     assert.deepEqual(errors,[]); console.log('PASS Analysis navigation, All sizing and bounded streams, player cleanup');
     await page.close();
     const app=await browser.newPage({viewport:{width:1440,height:900}}), now=Date.now()/1000;
-    const faults=[];app.on('pageerror',e=>faults.push(e.message));let sourceRequests=0,submitted=null,conflict=true;
+    const faults=[];app.on('pageerror',e=>faults.push(e.message));let sourceRequests=0,submitted=null,conflict=true,lateEvidence=false,releaseEvidence;
     await app.route('https://camerai1.iticfoundation.org/**',r=>{sourceRequests++;return r.fulfill({status:503,body:'offline'});});
     await app.route('https://fonts.googleapis.com/**',r=>r.abort());
     const cfg={camera_id:'03',revision:1,enabled:true,roi:null,thresholds:{pixel_score:.5,suspect_pct:5,active_pct:15,confirmations:3}};
@@ -35,8 +35,12 @@ const fs=require('node:fs');
       if(path.endsWith('/health'))body={worker:{available:true},model:{available:true},target_interval_seconds:60};
       else if(path.endsWith('/cameras'))body={generated_at:now,cameras:rows};
       else if(path.endsWith('/analytics')){const camera=new URL(r.request().url()).searchParams.get('camera_id');body={camera_ids:camera?[camera]:['03','13','14'],buckets:[10,null,0].map((v,i)=>({start:now-180+i*60,end:now-120+i*60,monitored_count:camera?1:3,valid_count:v===null?0:1,unknown_count:v===null?1:0,active_count:i===0?1:0,suspect_count:0,water_mean_pct:camera?v:null,water_max_pct:camera?v:null}))};}
-      else if(path.endsWith('/events'))body={items:[{id:'event',camera_id:'03',started_at:now-120,ended_at:null,peak_pct:25,start_evidence_id:'a'.repeat(32)}],next_cursor:null};
-      else if(path.includes('/evidence/')){status=410;body={detail:'evidence_expired'};}
+      else if(path.endsWith('/events'))body={items:(lateEvidence?['a','b']:['a']).map(letter=>({id:letter,camera_id:'03',started_at:now-120,ended_at:null,peak_pct:25,start_evidence_id:letter.repeat(32)})),next_cursor:null};
+      else if(path.includes('/evidence/')){
+        if(lateEvidence&&path.endsWith('a'.repeat(32)))return new Promise(resolve=>{releaseEvidence=async()=>{try{await r.fulfill({status:410,contentType:'application/json',body:'{}'});}catch{}resolve();};});
+        if(lateEvidence&&path.endsWith('b'.repeat(32)))return r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="blue"/></svg>'});
+        status=410;body={detail:'evidence_expired'};
+      }
       else if(path.endsWith('/config')){if(method==='PUT'){submitted=r.request().postDataJSON();assert.equal(r.request().headers().authorization,'Bearer private-admin');status=conflict?409:200;body=conflict?{detail:'config_revision_conflict'}:{...cfg,...submitted,revision:2};}else body=cfg;}
       else if(path.endsWith('/snapshot')){assert.equal(r.request().headers().authorization,'Bearer private-admin');if(method==='POST')body={captured_at:now};else return r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#263c48"/><path d="M0 360L260 0H380L640 360" fill="#64727c"/></svg>'});}
       else {status=404;body={detail:'unknown'};}
@@ -49,6 +53,12 @@ const fs=require('node:fs');
     assert.equal(await app.locator('#coverage-chart circle.curve-water').count(),2,'null bucket splits the water curve');
     assert.equal(await app.locator('#analysis-buckets tr').first().locator('td').nth(5).textContent(),'10.0%');
     await app.locator('#analysis-events button').click();await app.waitForFunction(()=>document.querySelector('#event-evidence-message').textContent.includes('หมดอายุ'));
+    await app.click('#close-event-evidence');
+    lateEvidence=true;await app.click('#analysis-refresh');await app.waitForFunction(()=>document.querySelector('#analysis-events').children.length===2);
+    await app.locator('#analysis-events button').nth(0).click();await app.waitForTimeout(50);assert(releaseEvidence);
+    await app.click('#close-event-evidence');await app.locator('#analysis-events button').nth(1).click();await app.locator('#event-evidence-image').waitFor({state:'visible'});
+    await releaseEvidence();await app.waitForTimeout(100);
+    assert.equal(await app.locator('#event-evidence-message').textContent(),'หลักฐานตอนเปลี่ยนสถานะ','Late evidence A must not overwrite B');
     await app.click('#close-event-evidence');
     fs.mkdirSync('runtime/flood/qa',{recursive:true});
     for(const width of [320,390,768,1440]){

@@ -30,6 +30,7 @@ class Store:
             UNIQUE(camera_id,captured_at,config_revision,model_revision));
           CREATE INDEX IF NOT EXISTS obs_camera_time ON observations(camera_id,captured_at DESC,id DESC);
           CREATE INDEX IF NOT EXISTS obs_time ON observations(captured_at);
+          CREATE INDEX IF NOT EXISTS obs_evidence ON observations(json_extract(data,'$.evidence_id'));
           CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,camera_id TEXT NOT NULL,started_at REAL NOT NULL,
             ended_at REAL,end_reason TEXT,peak_pct REAL NOT NULL,start_evidence_id TEXT,end_evidence_id TEXT);
           CREATE INDEX IF NOT EXISTS events_camera_time ON events(camera_id,started_at);
@@ -134,6 +135,7 @@ class Store:
         return Page([Reading(**json.loads(row['data'])) for row in shown], next_cursor)
 
     def events(self, ids, start, end, limit=100, cursor=None):
+        self.expire_events(time.time())
         ids, marks = self._ids(ids)
         if not ids: return Page([])
         values = [*ids, end, start]
@@ -168,9 +170,17 @@ class Store:
 
     def has_evidence(self, ident):
         with self.lock:
-            return any(json.loads(row['data']).get('evidence_id') == ident for row in self.db.execute('SELECT data FROM observations'))
+            return self.db.execute("SELECT 1 FROM observations WHERE json_extract(data,'$.evidence_id')=? LIMIT 1",(ident,)).fetchone() is not None
+
+    def expire_events(self, now):
+        with self.lock, self.db:
+            self.db.execute('''UPDATE events SET ended_at=(
+                SELECT MAX(captured_at) FROM observations WHERE observations.camera_id=events.camera_id),
+                end_reason='data_gap' WHERE ended_at IS NULL AND (
+                SELECT MAX(captured_at) FROM observations WHERE observations.camera_id=events.camera_id)<?''',(now-180,))
 
     def prune(self, now, observation_days=30):
+        self.expire_events(now)
         with self.lock, self.db:
             count = self.db.execute('DELETE FROM observations WHERE captured_at<?', (now-observation_days*86400,)).rowcount
             self.db.execute('DELETE FROM events WHERE ended_at IS NOT NULL AND ended_at<?', (now-observation_days*86400,))

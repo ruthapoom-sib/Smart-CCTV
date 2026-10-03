@@ -32,3 +32,11 @@ def test_evidence_expired_vs_unknown_and_worker_unavailable(tmp_path, config_fac
         assert c.get('/api/flood/evidence/'+'a'*32).status_code == 410
         assert c.get('/api/flood/health').json()['worker']['available'] is False
         assert c.get('/api/flood/cameras').json()['cameras'][0]['reading']['status']=='clear'
+
+def test_manifest_alone_never_reports_broken_model_ready(tmp_path):
+    import json
+    model=tmp_path/'models';model.mkdir();(model/'manifest.json').write_text('{}')
+    app=create_app(Settings(runtime=tmp_path,model_path=model))
+    app.state.store.set_health('analysis',{'reason':'model_unavailable','model_id':None,'processed_at':time.time()})
+    with TestClient(app) as c:
+        assert c.get('/api/flood/health').json()['model']['available'] is False

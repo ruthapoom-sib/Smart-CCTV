@@ -67,8 +67,11 @@ def create_app(settings):
     def health():
         now=time.time(); worker=store.get_health('worker') or {}; age=now-worker.get('heartbeat',0)
         analysis=store.get_health('analysis') or {}
-        return {'api':'available', 'worker':{**worker,'available':worker.get('state')=='running' and 0<=age<=settings.fresh_age},
-            'model':{'available':(settings.model_path/'manifest.json').is_file(), **analysis},
+        worker_available=worker.get('state')=='running' and 0<=age<=settings.fresh_age
+        model_age=now-analysis.get('processed_at',0)
+        model_available=bool(worker_available and analysis.get('model_revision') and not analysis.get('reason') and 0<=model_age<=settings.fresh_age)
+        return {'api':'available', 'worker':{**worker,'available':worker_available},
+            'model':{**analysis,'files_installed':(settings.model_path/'manifest.json').is_file(),'available':model_available},
             'dependencies':{'ffmpeg':shutil.which(settings.ffmpeg) is not None},
             'fresh_age_seconds':settings.fresh_age, 'target_interval_seconds':settings.interval,
             'last_cycle_seconds':store.get_health('last_cycle_seconds')}
