@@ -1,11 +1,11 @@
 import numpy as np
-from scipy.ndimage import label, find_objects
+from scipy.ndimage import label, find_objects, binary_dilation
 from .contracts import RawClassification, RainThresholds
 from .geometry import roi_mask
 
 
 class RainDetector:
-    def __init__(self, revision: str = 'v1'):
+    def __init__(self, revision: str = 'v2-full-frame'):
         self.revision = revision
 
     def analyze(
@@ -71,15 +71,55 @@ class RainDetector:
             ), np.zeros((h, w), dtype=bool)
 
         total_frames = len(frames)
+        # Reject compression flicker relative to each pixel's temporal noise.
+        # Genuine streaks should briefly cross a pixel, rather than brighten
+        # the same edge through a large part of the clip.
+        signed_diffs = stack - bg
+        noise = np.median(np.abs(signed_diffs), axis=0)
+        candidates = signed_diffs >= thresholds.min_intensity_diff + 3.0 * noise
+        transient = candidates.sum(axis=0) <= max(2, total_frames // 4)
         frame_streak_counts = []
         composite_mask = np.zeros((h, w), dtype=bool)
         all_aspects = []
         all_diffs = []
+        suppressed_motion_pixels = 0
 
         for t in range(total_frames):
             # Streaks are transient brightness increases over median background
-            diff = (stack[t] - bg) * r_mask
-            streak_pixels = diff >= thresholds.min_intensity_diff
+            diff = signed_diffs[t]
+            # Vehicles produce thin bright edges inside a much larger moving
+            # object. Group nearby positive AND negative changes and suppress
+            # dense, large objects; retain isolated streaks elsewhere in view.
+            motion_labels, _ = label(binary_dilation(
+                np.abs(diff) >= thresholds.min_intensity_diff, iterations=2))
+            # Dilation can also join nearby real rain streaks. Require either
+            # substantial dark object motion or a broad undilated component
+            # before treating a joined group as a vehicle.
+            changed = np.abs(diff) >= thresholds.min_intensity_diff
+            negative = diff <= -thresholds.min_intensity_diff
+            broad = np.zeros((h, w), dtype=bool)
+            raw_labels, _ = label(changed)
+            for i, sl in enumerate(find_objects(raw_labels)):
+                if sl is None:
+                    continue
+                sy, sx = sl
+                height, width = sy.stop - sy.start, sx.stop - sx.start
+                if (width > max(24, 0.06*w) or height > max(60, 0.2*h)) and np.mean(raw_labels[sl] == i + 1) > 0.4:
+                    broad[sl] = True
+            blocked = np.zeros((h, w), dtype=bool)
+            for i, sl in enumerate(find_objects(motion_labels)):
+                if sl is None:
+                    continue
+                sy, sx = sl
+                height, width = sy.stop - sy.start, sx.stop - sx.start
+                group = motion_labels[sl] == i + 1
+                density = np.mean(group)
+                negative_fraction = np.sum(negative[sl] & group) / max(1, np.sum(changed[sl] & group))
+                object_support = negative_fraction >= 0.2 or (broad[sl] & group).any()
+                if object_support and density > 0.4 and (width > max(24, 0.06*w) or height > max(60, 0.2*h)):
+                    blocked[sl] = True
+            suppressed_motion_pixels += int((blocked & r_mask).sum())
+            streak_pixels = candidates[t] & transient & ~blocked & r_mask
             if not streak_pixels.any():
                 frame_streak_counts.append(0)
                 continue
@@ -98,9 +138,9 @@ class RainDetector:
 
                 # Vertical-ish streak criteria:
                 # - length >= 4px and <= 60px
-                # - width <= 12px
+                # - width <= 4px at the capture resolution (max width 640)
                 # - aspect ratio >= thresholds.min_streak_aspect
-                if 4 <= len_y <= 60 and len_x <= 12 and aspect >= thresholds.min_streak_aspect:
+                if 4 <= len_y <= 60 and len_x <= 4 and aspect >= thresholds.min_streak_aspect:
                     count += 1
                     comp_mask = labeled[sl] == (i + 1)
                     composite_mask[sl] |= comp_mask
@@ -127,6 +167,7 @@ class RainDetector:
             'candidate_streaks': total_streaks,
             'mean_aspect': round(float(np.mean(all_aspects)), 2) if all_aspects else 0.0,
             'mean_streak_diff': round(float(np.mean(all_diffs)), 2) if all_diffs else 0.0,
+            'suppressed_motion_pixels': suppressed_motion_pixels,
         }
 
         if frame_ratio >= thresholds.min_frame_ratio and total_streaks >= (thresholds.min_streaks * active_frames):
