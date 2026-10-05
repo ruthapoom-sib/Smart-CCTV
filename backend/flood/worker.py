@@ -139,8 +139,12 @@ def run_worker(settings, stop_event, once=False):
                 if store.record(reading, config.revision):
                     sequences[ident] = sequence; last_capture = reading.captured_at
                 else: sequences.pop(ident, None)
-                store.set_health('analysis', {'reason':reading.reason, 'model_id':reading.model_id,
-                    'model_revision':reading.model_revision, 'processed_at':reading.processed_at})
+                # Capture/blank-image failures describe this source, not the inference
+                # model. Retain its last actual inference result (including
+                # inference errors); the API still expires it by freshness.
+                if frame is not None and reading.reason != 'image_quality':
+                    store.set_health('analysis', {'reason':reading.reason, 'model_id':reading.model_id,
+                        'model_revision':reading.model_revision, 'processed_at':reading.processed_at})
                 scheduler.completed(ident, time.monotonic()); finished.add(ident)
             if len(finished)==len(catalog):
                 store.set_health('last_cycle_seconds', time.monotonic()-cycle_started)
