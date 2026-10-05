@@ -13,6 +13,8 @@
     "test:flood-browser": "node tests/flood-browser.cjs",
     "test:rain-browser": "node tests/rain-browser.cjs",
     "test:browser": "node tests/browser.cjs",
+    "test:redesign-browser": "node tests/redesign-browser.cjs",
+    "test:visibility-browser": "node tests/visibility-browser.cjs",
     "test:live": "node tests/live.cjs",
     "check": "node tools/check-syntax.cjs && npm test",
     "api": "python -m uvicorn backend.flood.api:app --host 127.0.0.1 --port 8100",
