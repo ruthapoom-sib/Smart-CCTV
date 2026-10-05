@@ -4,6 +4,19 @@ from fastapi.testclient import TestClient
 from backend.flood.api import create_app
 from backend.flood.settings import Settings
 
+def test_api_home_explains_base_url_and_links_to_both_detectors(tmp_path):
+    app = create_app(Settings(runtime=tmp_path, admin_token='test-private-token'))
+    with TestClient(app) as client:
+        response = client.get('/')
+        assert response.status_code == 200
+        home = response.json()
+        assert home['service'] == 'CCTV Detection API'
+        assert home['endpoints']['flood_health'] == '/api/flood/health'
+        assert home['endpoints']['rain_health'] == '/api/rain/health'
+        for path in home['endpoints'].values():
+            assert client.get(path).status_code == 200
+        assert 'test-private-token' not in response.text
+
 def test_config_auth_conflict_and_validation(tmp_path):
     app = create_app(Settings(runtime=tmp_path, admin_token='test-private-token'))
     with TestClient(app) as c:

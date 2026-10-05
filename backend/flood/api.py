@@ -73,6 +73,19 @@ def create_app(settings):
     def page_call(fn, *args):
         try: return asdict(fn(*args))
         except ValueError: raise HTTPException(422, 'invalid_cursor')
+    @app.get('/')
+    def home():
+        return {
+            'service': 'CCTV Detection API',
+            'message': 'ใส่ URL หลักนี้ในช่อง API ของเว็บ CCTV สถานะตัวตรวจดูได้จาก endpoints ด้านล่าง',
+            'website': 'https://smart-cctv-beige.vercel.app/',
+            'endpoints': {
+                'flood_health': '/api/flood/health',
+                'rain_health': '/api/rain/health',
+                'flood_cameras': '/api/flood/cameras',
+                'rain_cameras': '/api/rain/cameras',
+            },
+        }
     @app.get('/api/flood/health')
     def health():
         now=time.time(); worker=store.get_health('worker') or {}; age=now-worker.get('heartbeat',0)

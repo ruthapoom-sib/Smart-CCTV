@@ -60,6 +60,51 @@ def test_capture_failure_is_unknown_and_resets_sequence(monkeypatch, catalog, co
     assert reading.status == 'unknown' and reading.reason == 'capture_timeout'
     assert reading.water_coverage_pct is None and sequence.high_count == 0
 
+
+@pytest.mark.parametrize('failure_kind', ['capture', 'quality', 'inference'])
+def test_source_failure_and_inference_failure_have_separate_model_health(tmp_path, monkeypatch, catalog, config_factory, failure_kind):
+    import numpy as np
+    from PIL import Image
+    from backend.flood.contracts import Capture, Prediction
+    from backend.flood.worker import run_worker
+    from backend.flood.settings import Settings
+    from backend.flood.store import Store
+    from backend.flood.model import ModelError
+    monkeypatch.setattr('backend.flood.worker.load_catalog', lambda path: catalog)
+    store = Store(tmp_path/'flood.sqlite3', catalog)
+    for camera in catalog:
+        store.save_config(config_factory(camera.id), 0)
+    store.close()
+    def capture(camera, *args):
+        if camera.id == '13':
+            time.sleep(0.1)
+            if failure_kind == 'capture':
+                raise CaptureError('capture_failed')
+        return Capture(camera.id, Image.new('RGB',(20,20)), time.time())
+    class Model:
+        def __init__(self, *args): pass
+        def predict(self, frame, threshold):
+            if frame.camera_id == '13' and failure_kind in ('quality', 'inference'):
+                raise ModelError('image_quality' if failure_kind == 'quality' else 'model_unavailable')
+            return Prediction(np.zeros((20,20),bool),np.zeros((20,20)), 'test-model', 'test-revision')
+        def close(self): pass
+    monkeypatch.setattr('backend.flood.worker.capture_frame', capture)
+    monkeypatch.setattr('backend.flood.worker.InferenceSupervisor', Model)
+    run_worker(Settings(runtime=tmp_path), threading.Event(), once=True)
+    store = Store(tmp_path/'flood.sqlite3', catalog)
+    try:
+        expected_reason = {'capture':'capture_failed', 'quality':'image_quality', 'inference':'model_unavailable'}[failure_kind]
+        if failure_kind in ('capture', 'quality'):
+            assert store.get_health('analysis')['model_revision'] == 'test-revision'
+            assert store.get_health('analysis')['reason'] is None
+        else:
+            assert store.get_health('analysis')['model_revision'] is None
+            assert store.get_health('analysis')['reason'] == expected_reason
+        offline = next(r for r in store.latest(time.time()) if r.camera_id == '13')
+        assert offline.status == 'unknown' and offline.reason == expected_reason
+    finally:
+        store.close()
+
 def test_retention_runs_when_all_cameras_disabled(tmp_path,reading_factory):
     from backend.flood.worker import run_worker
     from backend.flood.settings import Settings,load_catalog

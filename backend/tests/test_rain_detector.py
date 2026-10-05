@@ -69,3 +69,60 @@ def test_detector_synthetic_rain_streaks():
     assert res.raw_status == 'rainy'
     assert res.score > 0.4
     assert mask.any()
+
+
+def moving_vehicle_frames():
+    y, x = np.mgrid[0:180, 0:320]
+    base = (110 + (x + y) % 20).astype(np.uint8)
+    frames = [np.stack([base]*3, axis=-1).copy() for _ in range(16)]
+    for t, frame in enumerate(frames):
+        left = 10 + 10*t
+        frame[70:110, left:left+70] = 65
+        for offset in range(5, 65, 10):
+            frame[78:100, left+offset:left+offset+2] = 220
+    return frames
+
+
+def test_full_frame_moving_vehicle_edges_are_not_rain():
+    result, mask = RainDetector().analyze(
+        moving_vehicle_frames(), [(0,0),(1,0),(1,1),(0,1)], RainThresholds())
+    assert result.raw_status == 'dry'
+
+
+def test_persistent_bright_edges_are_not_transient_rain():
+    y, x = np.mgrid[0:100, 0:100]
+    base = (100 + (x + y) % 20).astype(np.uint8)
+    frames = [np.stack([base]*3, axis=-1).copy() for _ in range(16)]
+    for frame in frames[4:12]:
+        for left in range(10, 90, 10):
+            frame[20:40, left] += 30
+    result, mask = RainDetector().analyze(
+        frames, [(0,0),(1,0),(1,1),(0,1)], RainThresholds())
+    assert result.raw_status == 'dry'
+
+
+def test_rain_outside_moving_vehicle_is_still_detected():
+    frames = moving_vehicle_frames()
+    for t in range(4,15):
+        for index in range(12):
+            left = 10 + index*24 + t % 4
+            top = 10 + ((t*7 + index*11) % 30)
+            frames[t][top:top+12, left] += 35
+    result, mask = RainDetector().analyze(
+        frames, [(0,0),(1,0),(1,1),(0,1)], RainThresholds())
+    assert result.raw_status == 'rainy'
+    assert mask.any()
+
+
+def test_dense_cluster_of_transient_rain_is_not_a_moving_vehicle():
+    y, x = np.mgrid[0:360, 0:640]
+    base = (110 + (x + y) % 20).astype(np.uint8)
+    frames = [np.stack([base]*3, axis=-1).copy() for _ in range(16)]
+    for t, frame in enumerate(frames):
+        for left in range(100,149,4):
+            top = 10 + 18*t
+            frame[top:top+12, left] += 35
+    result, mask = RainDetector().analyze(
+        frames, [(0,0),(1,0),(1,1),(0,1)], RainThresholds())
+    assert result.raw_status == 'rainy'
+    assert mask.any()
