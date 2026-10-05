@@ -117,6 +117,7 @@ const { createServer } = require('../tools/serve.cjs');
     const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
     assert(noOverflow, 'Mobile viewport must not have horizontal scrollbar');
 
+    await page.click('#menu-toggle');
     await page.click('#nav-live');
     await page.waitForTimeout(300);
     const noOverflowLive = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);

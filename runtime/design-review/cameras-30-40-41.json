@@ -1,0 +1,505 @@
+{
+  "at": "2026-10-05T02:45:35.727Z",
+  "tiles": [
+    {
+      "id": "03",
+      "state": "live",
+      "readyState": 4,
+      "currentTime": 14.467956,
+      "advancing": true,
+      "width": 800,
+      "height": 450,
+      "screen": {
+        "width": 566,
+        "height": 264.828125
+      },
+      "opacity": "1"
+    },
+    {
+      "id": "30",
+      "state": "live",
+      "readyState": 4,
+      "currentTime": 14.460104,
+      "advancing": true,
+      "width": 800,
+      "height": 450,
+      "screen": {
+        "width": 566,
+        "height": 264.828125
+      },
+      "opacity": "1"
+    },
+    {
+      "id": "40",
+      "state": "live",
+      "readyState": 4,
+      "currentTime": 14.459116,
+      "advancing": true,
+      "width": 800,
+      "height": 450,
+      "screen": {
+        "width": 566,
+        "height": 264.84375
+      },
+      "opacity": "1"
+    },
+    {
+      "id": "41",
+      "state": "live",
+      "readyState": 4,
+      "currentTime": 14.455162,
+      "advancing": true,
+      "width": 800,
+      "height": 450,
+      "screen": {
+        "width": 566,
+        "height": 264.84375
+      },
+      "opacity": "1"
+    }
+  ],
+  "playlist": {
+    "30": {
+      "status": 200,
+      "body": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXT-X-MEDIA-SEQUENCE:546\n#EXTINF:5.120011,\nccs30546.ts\n#EXTINF:5.120022,\nccs30547.ts\n",
+      "segmentUrl": "https://camerai1.iticfoundation.org/hls/ccs30547.ts",
+      "segmentStatus": 200,
+      "segmentBytes": 256244
+    },
+    "40": {
+      "status": 200,
+      "body": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXT-X-MEDIA-SEQUENCE:546\n#EXTINF:5.119933,\nccs40546.ts\n#EXTINF:3.839944,\nccs40547.ts\n",
+      "segmentUrl": "https://camerai1.iticfoundation.org/hls/ccs40547.ts",
+      "segmentStatus": 200,
+      "segmentBytes": 273540
+    },
+    "41": {
+      "status": 200,
+      "body": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXT-X-MEDIA-SEQUENCE:546\n#EXTINF:5.119978,\nccs41546.ts\n#EXTINF:5.119944,\nccs41547.ts\n",
+      "segmentUrl": "https://camerai1.iticfoundation.org/hls/ccs41547.ts",
+      "segmentStatus": 200,
+      "segmentBytes": 310388
+    },
+    "03": {
+      "status": 200,
+      "body": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:5\n#EXT-X-MEDIA-SEQUENCE:546\n#EXTINF:3.840011,\nccs03546.ts\n#EXTINF:5.120011,\nccs03547.ts\n",
+      "segmentUrl": "https://camerai1.iticfoundation.org/hls/ccs03547.ts",
+      "segmentStatus": 200,
+      "segmentBytes": 443492
+    }
+  },
+  "modes": [
+    {
+      "mode": "desktop-all",
+      "id": "30",
+      "state": "live",
+      "advancing": true
+    },
+    {
+      "mode": "desktop-all",
+      "id": "40",
+      "state": "live",
+      "advancing": true
+    },
+    {
+      "mode": "desktop-all",
+      "id": "41",
+      "state": "live",
+      "advancing": true
+    },
+    {
+      "mode": "mobile-swipe",
+      "id": "30",
+      "state": "live",
+      "advancing": true
+    },
+    {
+      "mode": "mobile-swipe",
+      "id": "40",
+      "state": "live",
+      "advancing": true
+    },
+    {
+      "mode": "mobile-swipe",
+      "id": "41",
+      "state": "live",
+      "advancing": true
+    }
+  ],
+  "hls": [
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs01.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs03.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs05.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs06.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs03.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs30.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs40.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs41.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "error",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs22.m3u8",
+      "type": "networkError",
+      "details": "manifestLoadError",
+      "fatal": true,
+      "error": "A network error (status 0) occurred while loading manifest",
+      "code": 0
+    },
+    {
+      "event": "error",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs23.m3u8",
+      "type": "networkError",
+      "details": "manifestLoadError",
+      "fatal": true,
+      "error": "A network error (status 0) occurred while loading manifest",
+      "code": 0
+    },
+    {
+      "event": "error",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs42.m3u8",
+      "type": "networkError",
+      "details": "manifestLoadError",
+      "fatal": true,
+      "error": "A network error (status 0) occurred while loading manifest",
+      "code": 0
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs07.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs28.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs29.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs26.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs27.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640032",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs30.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs15.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs16.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs34.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs20.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs21.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs36.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs37.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs38.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs39.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs40.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs41.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs30.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs40.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    },
+    {
+      "event": "codecs",
+      "url": "https://camerai1.iticfoundation.org/hls/ccs41.m3u8",
+      "tracks": {
+        "video": {
+          "codec": "avc1.640029",
+          "container": "video/mp4"
+        },
+        "tracks": {}
+      }
+    }
+  ],
+  "failed": [
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs22.m3u8",
+      "error": "net::ERR_FAILED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs23.m3u8",
+      "error": "net::ERR_FAILED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs241326.ts",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs42.m3u8",
+      "error": "net::ERR_FAILED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs05547.ts",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs06547.ts",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs01547.ts",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs00547.ts",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "https://camerai1.iticfoundation.org/hls/ccs02547.ts",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "errors": []
+}

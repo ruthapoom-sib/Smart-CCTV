@@ -62,7 +62,7 @@ const fs=require('node:fs');
     await app.click('#close-event-evidence');
     fs.mkdirSync('runtime/flood/qa',{recursive:true});
     for(const width of [320,390,768,1440]){
-      await app.setViewportSize({width,height:900});await app.evaluate(()=>{scrollTo(0,0);document.querySelector('#analyst').scrollTop=0;});await app.screenshot({path:`runtime/flood/qa/analysis-${width}.png`,fullPage:true});
+      await app.setViewportSize({width,height:900});await app.evaluate(()=>{scrollTo(0,0);document.querySelector('#analyst').scrollTop=0;});await app.waitForTimeout(500);await app.screenshot({path:`runtime/flood/qa/analysis-${width}.png`,fullPage:true});
       assert(await app.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Analysis no overflow at ${width}`);
     }
     await app.click('#analysis-config');await app.fill('#roi-token','private-admin');await app.click('#roi-capture');await app.locator('#roi-stage').waitFor({state:'visible'});

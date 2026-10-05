@@ -4,6 +4,7 @@ A responsive live traffic camera viewer for Chachoengsao, Thailand, covering **4
 
 ## Features
 
+- Premium navy and mint interface with a camera explorer sidebar, accessible mobile drawer, and locally bundled GSAP transitions. Reduced-motion preferences are respected; controls work without GSAP.
 - Search cameras by name, road, intersection, or ID.
 - Filter intersections and save favorites in your browser.
 - Desktop layouts with 1, 4, 9, 16, or all cameras.
@@ -37,6 +38,7 @@ npm run check
 npm ci
 npx playwright install chromium
 npm run test:browser
+npm run test:redesign-browser
 npm run test:live
 ```
 
@@ -62,4 +64,4 @@ Streams may be delayed or unavailable. No video recording or playback history is
 
 Keyboard shortcuts: **Left/Right** to navigate, **Space** to toggle rotation, **F** for fullscreen, and **Esc** to exit expanded view or close help.
 
-Developed by **Ruthapoom Sib**. Bundled hls.js license: `vendor/hls-LICENSE`.
+Developed by **Ruthapoom Sib**. Bundled library notices: `vendor/hls-LICENSE` and `vendor/gsap-LICENSE` (GSAP 3.15.0).

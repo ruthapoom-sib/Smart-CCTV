@@ -1,0 +1,40 @@
+const { chromium } = require('playwright');
+const { createServer } = require('../../tools/serve.cjs');
+const fs = require('node:fs');
+(async () => {
+  const server = createServer();
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  let browser;
+  try {
+    browser = await chromium.launch();
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.waitForTimeout(12000);
+    await page.evaluate(() => document.fonts.ready);
+    const before = await page.locator('video').evaluateAll(els => els.map(el => el.currentTime));
+    await page.waitForTimeout(2000);
+    const advancing = await page.locator('video').evaluateAll((els, times) => els.filter((el, i) => el.currentTime > times[i]).length, before);
+    await page.screenshot({ path: 'runtime/design-review/premium-live-desktop.png' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(5000);
+    const mobileBefore = await page.locator('video').evaluateAll(els => els.map(el => el.currentTime));
+    await page.waitForTimeout(2000);
+    const mobileAdvancing = await page.locator('video').evaluateAll((els, times) => els.filter((el, i) => el.currentTime > times[i]).length, mobileBefore);
+    await page.screenshot({ path: 'runtime/design-review/premium-live-mobile.png' });
+    await page.locator('#menu-toggle').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'runtime/design-review/premium-drawer.png' });
+    await page.locator('#nav-analysis').click();
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: 'runtime/design-review/premium-analysis-mobile.png', fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'runtime/design-review/premium-analysis-desktop.png' });
+    const report = { at: new Date().toISOString(), advancing, mobileAdvancing, fontLoaded: await page.evaluate(() => document.fonts.check('14px Anuphan')), errors };
+    fs.writeFileSync('runtime/design-review/premium-live-results.json', JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+    if (!advancing || !mobileAdvancing || errors.length) process.exitCode = 1;
+  } finally { await browser?.close(); server.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

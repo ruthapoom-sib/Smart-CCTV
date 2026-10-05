@@ -15,7 +15,8 @@
   const players = new Map(), visible = new Set();
   let activeView = !location.hash.startsWith('#analyst');
   let observer = null, tiles = [], filtered = [], pageCount = 0, due = 0;
-  let searchTimer, toastTimer, resizeTimer, statusQueued = false, storageWarned = false;
+  let searchTimer, toastTimer, resizeTimer, visibleFrame, statusQueued = false, storageWarned = false;
+  let scrollDirection = 0, lastGridTop = 0, lastWindowTop = scrollY;
   const swipe = () => mobile.matches && state.size !== 'all';
   const canPlay = () => activeView && !document.hidden && navigator.onLine;
   function currentCameraId() {
@@ -75,8 +76,23 @@
     action.hidden = swipe() && !['blocked', 'offline'].includes(status);
   }
   function reconcilePlayers() {
-    const allowed = new Set(tiles.filter(tile => visible.has(tile) && (!state.focus || tile.cam.id === state.focus))
-      .slice(0, state.size === 'all' ? 9 : tiles.length));
+    let candidates = tiles.filter(tile => visible.has(tile) && (!state.focus || tile.cam.id === state.focus));
+    if (state.size === 'all' && !state.focus) {
+      const viewport = grid.getBoundingClientRect();
+      const top = Math.max(0, viewport.top), bottom = Math.min(innerHeight, viewport.bottom);
+      const left = Math.max(0, viewport.left), right = Math.min(innerWidth, viewport.right);
+      // Rank actual footage, not catalog order or captions clipped at the top.
+      candidates = candidates.map(tile => {
+        const rect = tile.querySelector('.screen').getBoundingClientRect();
+        const area = Math.max(0, Math.min(rect.bottom, bottom) - Math.max(rect.top, top))
+          * Math.max(0, Math.min(rect.right, right) - Math.max(rect.left, left));
+        return { tile, top: rect.top, coverage: area / Math.max(1, rect.width * rect.height) };
+      }).filter(item => item.coverage > 0)
+        .sort((a, b) => b.coverage - a.coverage || scrollDirection * (b.top - a.top)).map(item => item.tile);
+    }
+    const allowed = new Set(candidates.slice(0, state.size === 'all' ? 9 : tiles.length));
+    // Release old slots first so switching priority never briefly exceeds the cap.
+    for (const tile of players.keys()) if (!canPlay() || !allowed.has(tile)) stopTile(tile);
     for (const tile of tiles) {
       const show = canPlay() && allowed.has(tile);
       if (show && !players.has(tile)) {
@@ -85,6 +101,17 @@
     }
     queueStatus();
   }
+  function queueVisiblePlayers(event) {
+    const inGrid = event.currentTarget === grid;
+    const position = inGrid ? grid.scrollTop : scrollY;
+    const previous = inGrid ? lastGridTop : lastWindowTop;
+    if (position !== previous) scrollDirection = Math.sign(position - previous);
+    if (inGrid) lastGridTop = position; else lastWindowTop = position;
+    if (visibleFrame || !activeView || state.size !== 'all') return;
+    visibleFrame = requestAnimationFrame(() => { visibleFrame = null; reconcilePlayers(); });
+  }
+  grid.addEventListener('scroll', queueVisiblePlayers, { passive: true });
+  addEventListener('scroll', queueVisiblePlayers, { passive: true });
   function observeTiles() {
     observer?.disconnect(); visible.clear();
     if (!('IntersectionObserver' in window)) {
@@ -245,10 +272,10 @@
     tile.querySelector('.camera-open').focus({ preventScroll: true });
   }
   function tick() {
-    if (!activeView) return;
     const now = new Date();
     $('clock').textContent = now.toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour12: false });
     $('clock').dateTime = now.toISOString();
+    if (!activeView) return;
     const running = state.auto && pageCount > 1 && !state.focus && canPlay() && !$('help-dialog').open;
     if (!running) resetTimer();
     const remaining = due - Date.now();
@@ -312,7 +339,7 @@
   }
   document.addEventListener('visibilitychange', visibilityChanged);
   addEventListener('online', visibilityChanged); addEventListener('offline', visibilityChanged);
-  addEventListener('pagehide', () => { [...players.keys()].forEach(stopTile); });
+  addEventListener('pagehide', () => { cancelAnimationFrame(visibleFrame); visibleFrame = null; [...players.keys()].forEach(stopTile); });
   addEventListener('pageshow', visibilityChanged);
   mobile.addEventListener('change', () => {
     const id = currentCameraId();
