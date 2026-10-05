@@ -85,6 +85,9 @@ const fs = require('node:fs');
     await page.click('#help');
     check('help dialog is keyboard accessible', await page.locator('#help-dialog').evaluate(el => el.open));
     await page.keyboard.press('Escape');
+    // Isolate reconnect behavior to the visible single-camera view. Multi-camera
+    // walls now scroll, so cameras below the viewport correctly remain paused.
+    await page.click('[data-n="1"]');
     await context.setOffline(true);
     await page.locator('#network-notice').waitFor({ state: 'visible' });
     check('offline state releases all streams', await page.locator('.tile:not([data-state="paused"])').count() === 0);
@@ -96,6 +99,7 @@ const fs = require('node:fs');
     check('hidden document releases all streams', await page.locator('.tile:not([data-state="paused"])').count() === 0);
     await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
     check('visible document resumes streams', await page.locator('.tile[data-state="paused"]').count() === 0);
+    await page.click('[data-n="4"]');
     // Test tour by advancing the browser clock, without a wall-clock sleep.
     await page.click('#auto');
     const before = await page.locator('#page').textContent();

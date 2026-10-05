@@ -39,6 +39,13 @@ const fs = require('node:fs');
     await page.setViewportSize({ width: 1440, height: 900 });
     check('desktop resize removes modal and inert state', await page.locator('#sidebar').evaluate(el => !el.hasAttribute('aria-modal') && !el.inert) && await page.locator('.app-main').evaluate(el => !el.inert));
     await page.locator('#nav-live').click();
+    await page.locator('#workspace').waitFor({ state: 'visible' });
+    check('desktop navigation spans the top and filters remain directly accessible', await page.evaluate(() => {
+      const nav = document.getElementById('sidebar').getBoundingClientRect();
+      const main = document.querySelector('.app-main').getBoundingClientRect();
+      const search = document.getElementById('search').getBoundingClientRect();
+      return nav.width >= innerWidth - 1 && nav.bottom <= main.top + 1 && search.width >= 250;
+    }));
     check('reduced motion never hides cards', await page.locator('.tile').evaluateAll(els => els.every(el => getComputedStyle(el).opacity === '1' && getComputedStyle(el).transform === 'none')));
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.locator('[data-n="16"]').click();
@@ -48,17 +55,33 @@ const fs = require('node:fs');
       return screen.height >= 40 && caption.bottom <= el.getBoundingClientRect().bottom + 1;
     })));
     await page.locator('[data-n="4"]').click();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    check('camera footage retains its full 16:9 viewing area', await page.locator('.screen').evaluateAll(els => els.every(el => {
+      const rect = el.getBoundingClientRect();
+      return Math.abs(rect.width / rect.height - 16 / 9) < .02;
+    })));
+    await page.locator('.tile').last().scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => document.querySelector('.tile:last-child').dataset.state !== 'paused');
+    check('scrolling the wall connects newly visible cameras and releases offscreen cameras', await page.locator('.tile').first().getAttribute('data-state') === 'paused');
+    await page.locator('#next').click();
+    check('changing camera pages returns the wall to the top', await page.locator('#grid').evaluate(el => el.scrollTop === 0));
     for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 320, height: 720 }]) {
       await page.setViewportSize(viewport);
       await page.waitForTimeout(180);
       check(`no page overflow at ${viewport.width}px`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-      await page.screenshot({ path: `runtime/design-review/premium-live-${viewport.width}.png` });
+      await page.screenshot({ path: `runtime/design-review/bright-live-${viewport.width}.png` });
     }
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('[data-n="1"]').click();
+    await page.locator('.screen').first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    check('landscape single-camera footage connects when visible', await page.locator('.tile').first().getAttribute('data-state') !== 'paused');
+    await page.setViewportSize({ width: 320, height: 720 });
     await menu.click();
     await page.locator('#nav-analysis').click();
-    await page.screenshot({ path: 'runtime/design-review/premium-analysis-mobile.png', fullPage: true });
+    await page.screenshot({ path: 'runtime/design-review/bright-analysis-mobile.png', fullPage: true });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.screenshot({ path: 'runtime/design-review/premium-analysis-desktop.png' });
+    await page.screenshot({ path: 'runtime/design-review/bright-analysis-desktop.png' });
     await context.close();
 
     const animated = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -103,7 +126,7 @@ const fs = require('node:fs');
     await plain.keyboard.press('Escape');
     check('GSAP failure preserves drawer, search and visible camera', await plain.locator('.tile').count() === 1 && await plain.locator('.tile').evaluate(el => getComputedStyle(el).opacity === '1'));
     check(`no JavaScript errors: ${JSON.stringify(errors)}`, errors.length === 0);
-    fs.writeFileSync('runtime/design-review/premium-results.json', JSON.stringify({ checks, errors }, null, 2));
+    fs.writeFileSync('runtime/design-review/bright-results.json', JSON.stringify({ checks, errors }, null, 2));
     console.log(`${checks} redesign checks passed`);
   } finally {
     await browser?.close();

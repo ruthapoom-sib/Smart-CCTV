@@ -206,7 +206,8 @@
       $('empty-description').textContent = noFavorites ? 'กดดาวใต้ภาพ เพื่อเก็บกล้องที่คุณดูเป็นประจำ' : 'ลองเปลี่ยนคำค้นหาหรือเลือกทางแยกอื่น';
     }
     layout();
-    if (swipe()) scrollToCurrent(); else grid.scrollLeft = 0;
+    if (swipe()) scrollToCurrent();
+    else { grid.scrollLeft = 0; grid.scrollTop = 0; }
     updateFavoriteButtons(); sync(); observeTiles(); resetTimer();
     document.dispatchEvent(new CustomEvent('cctv:tiles-rendered'));
   }

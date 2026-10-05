@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a101c">
+  <meta name="theme-color" content="#d90025">
   <meta name="description" content="ดูกล้องจราจรฉะเชิงเทรา 40 จุด ค้นหาทางแยก บันทึกกล้องโปรด ตรวจฝนและน้ำท่วมได้ทั้งมือถือและคอมพิวเตอร์">
   <title>กล้องจราจรฉะเชิงเทรา · CCTV Live</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -83,7 +83,7 @@
   </section>
   <div class="sidebar-bottom">
     <div class="city-visual" aria-hidden="true"><svg viewBox="0 0 200 64" fill="none"><path d="M0 60H200M12 60V40H32V60M43 60V25H65V60M77 60V12H103V60M116 60V32H142V60M153 60V21H176V60M84 12V5M95 12V5M0 49H200"/><path class="city-windows" d="M50 33H58M50 42H58M84 23H96M84 33H96M84 43H96M123 41H135M160 30H168M160 40H168"/></svg></div>
-    <p class="city-name">ฉะเชิงเทรา</p><p class="sidebar-hint">มองเมืองผ่านทุกมุมถนน</p>
+    <p class="city-name"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg>ฉะเชิงเทรา<span>THAILAND</span></p><p class="sidebar-hint">มองเมืองผ่านทุกมุมถนน</p>
     <div class="network-footprint"><span><strong>40</strong> กล้อง</span><span><strong>10</strong> ทางแยก</span></div>
     <p class="sidebar-note"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg> Chachoengsao, Thailand</p>
   </div>
@@ -93,7 +93,7 @@
 <header class="site-header">
   <div class="header-title">
     <button id="menu-toggle" class="icon-button" aria-label="เปิดเมนูและตัวกรอง" aria-controls="sidebar" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
-    <div><p class="header-kicker">CITY OBSERVATORY <span aria-hidden="true">/</span> <span id="header-view">LIVE VIEW</span></p><p id="header-title">ศูนย์เฝ้าดูจราจร</p></div>
+    <div><p class="mobile-brand">CCTV<span>SMART CITY</span></p><p class="header-kicker">CITY OBSERVATORY <span aria-hidden="true">/</span> <span id="header-view">LIVE VIEW</span></p><p id="header-title">ศูนย์เฝ้าดูจราจร</p></div>
   </div>
   <div class="header-context">
     <div class="clock"><time id="clock">--:--:--</time><span>เวลาประเทศไทย · UTC+7</span></div>
@@ -101,11 +101,18 @@
   </div>
 </header>
 <main id="workspace" tabindex="-1">
-  <div class="workspace-intro"><div><p class="section-kicker"><span aria-hidden="true"></span> TRAFFIC / LIVE</p><h2>ทุกมุมเมือง ในมุมมองเดียว<span class="intro-dot">.</span></h2></div><p>ภาพจราจรจากฉะเชิงเทรา<br><span>เลือกจุดที่คุณอยากเฝ้าดู</span></p></div>
+  <div class="workspace-intro">
+    <div class="intro-copy"><p class="section-kicker">กล้องจราจร · CHACHOENGSAO</p><h2>ฉะเชิงเทรา<span class="live-word">LIVE<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><path d="M10 7a7 7 0 0 1 0 10M15 3a13 13 0 0 1 0 18"/></svg></span></h2></div>
+    <div class="intro-network" aria-label="เครือข่ายกล้อง 40 กล้อง 10 ทางแยก">
+      <div><strong>40<span>กล้อง</span></strong><p>ภาพจากทั่วเมือง</p></div>
+      <span class="network-divider" aria-hidden="true"></span>
+      <div><strong>10<span>ทางแยก</span></strong><p>เลือกพื้นที่ที่คุณต้องการ</p></div>
+    </div>
+  </div>
   <div class="workspace-bar">
     <div class="workspace-heading"><h2 id="view-title">ทุกทางแยก</h2><span id="result-count"></span></div>
     <div class="workspace-tools">
-      <div class="view-options"><span class="view-label">มุมมอง</span><div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า"><button data-n="1">1<span> จอ</span></button><button data-n="4">4<span> จอ</span></button><button data-n="9">9<span> จอ</span></button><button data-n="16">16<span> จอ</span></button><button data-n="all">ทั้งหมด</button></div><button id="fs" class="icon-button" aria-label="เต็มจอ" title="เต็มจอ (F)"><svg class="ico"><use href="#i-max"/></svg></button></div>
+      <div class="view-options"><span class="view-label">มุมมอง</span><div class="seg sizes" role="group" aria-label="จำนวนจอต่อหน้า"><button data-n="1"><svg class="layout-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2"/></svg>1<span> จอ</span></button><button data-n="4"><svg class="layout-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zm7 0h5v5H9zM2 9h5v5H2zm7 0h5v5H9z"/></svg>4<span> จอ</span></button><button data-n="9">9<span> จอ</span></button><button data-n="16">16<span> จอ</span></button><button data-n="all">ทั้งหมด</button></div><button id="fs" class="icon-button" aria-label="เต็มจอ" title="เต็มจอ (F)"><svg class="ico"><use href="#i-max"/></svg></button></div>
       <div class="workspace-actions"><span id="live" class="live-status" role="status" aria-live="polite"><i aria-hidden="true"></i><span>กำลังเชื่อมต่อ…</span></span><button id="refresh" class="icon-button" aria-label="เชื่อมต่อกล้องบนจอใหม่" title="เชื่อมต่อกล้องบนจอใหม่"><svg class="ico"><use href="#i-refresh"/></svg></button><button id="exit-focus" hidden><svg class="ico" aria-hidden="true"><use href="#i-min"/></svg>กลับทุกจอ</button></div>
     </div>
   </div>
