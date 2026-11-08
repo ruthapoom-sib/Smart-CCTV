@@ -37,6 +37,7 @@ const fs = require('node:fs');
     check('backdrop closes drawer', await menu.getAttribute('aria-expanded') === 'false');
     await menu.click();
     await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForFunction(() => !document.querySelector('#sidebar').hasAttribute('aria-modal') && !document.querySelector('#sidebar').inert && !document.querySelector('.app-main').inert);
     check('desktop resize removes modal and inert state', await page.locator('#sidebar').evaluate(el => !el.hasAttribute('aria-modal') && !el.inert) && await page.locator('.app-main').evaluate(el => !el.inert));
     await page.locator('#nav-live').click();
     check('reduced motion never hides cards', await page.locator('.tile').evaluateAll(els => els.every(el => getComputedStyle(el).opacity === '1' && getComputedStyle(el).transform === 'none')));

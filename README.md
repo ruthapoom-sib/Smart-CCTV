@@ -4,14 +4,14 @@ A responsive live traffic camera viewer for Chachoengsao, Thailand, covering **4
 
 ## Features
 
-- Premium navy and mint interface with a camera explorer sidebar, accessible mobile drawer, and locally bundled GSAP transitions. Reduced-motion preferences are respected; controls work without GSAP.
+- Dark monitoring interface with a camera explorer sidebar, accessible mobile drawer, and locally bundled GSAP transitions. Reduced-motion preferences are respected; controls work without GSAP.
 - Search cameras by name, road, intersection, or ID.
 - Filter intersections and save favorites in your browser.
 - Desktop layouts with 1, 4, 9, 16, or all cameras.
 - Mobile swipe navigation and an all-camera overview.
 - Camera order follows the original intersection list; expanded navigation moves one camera at a time and layout changes preserve the current position.
 - Automatic rotation, playback status, and stream recovery.
-- Separate **Analysis** navigation for water status, historical charts, events and per-camera road ROI setup.
+- Live view focused interface. Water and rain analysis is temporarily hidden and its browser polling is disabled; the backend and analysis code remain available.
 - All-camera overview uses readable scrolling tiles and at most nine visible streams.
 - Mint and navy SVG logo combining a camera lens and city skyline, used in the header and favicon.
 
@@ -38,7 +38,7 @@ npm run check
 npm ci
 npx playwright install chromium
 npm run test:browser
-npm run test:redesign-browser
+node tests/live-interface-browser.cjs
 npm run test:live
 ```
 
