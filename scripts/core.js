@@ -37,7 +37,8 @@
     if (force === 'hls' && hls) return 'hls';
     if (force === 'native' && native) return 'native';
     const apple = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && touch > 1);
-    if (apple && native) return 'native';
+    const safari = /Macintosh/.test(ua) && /Safari\//.test(ua) && /Version\//.test(ua) && !/(Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS)\//.test(ua);
+    if ((apple || safari) && native) return 'native';
     return hls ? 'hls' : native ? 'native' : 'none';
   }
   const isTV = ua => /Tizen|Web0S|webOS|SMART-TV|SmartTV|HbbTV|NetCast|BRAVIA/i.test(ua);

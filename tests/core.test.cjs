@@ -26,6 +26,14 @@ test('native HLS is preferred on iPhone and iPad', () => {
   assert.equal(c.pickPlayer({ ua: 'Macintosh', touch: 5, hls: true, native: true }), 'native');
   assert.equal(c.pickPlayer({ ua: 'Windows', hls: true, native: true }), 'hls');
 });
+test('desktop Safari prefers native HLS without changing Chrome on Mac', () => {
+  const safari = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+  const chrome = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  assert.equal(c.pickPlayer({ ua: safari, hls: true, native: true }), 'native');
+  assert.equal(c.pickPlayer({ ua: safari, hls: true, native: false }), 'hls');
+  assert.equal(c.pickPlayer({ ua: safari, hls: true, native: true, force: 'hls' }), 'hls');
+  assert.equal(c.pickPlayer({ ua: chrome, hls: true, native: true }), 'hls');
+});
 test('unavailable forced HLS never crashes the page', () => {
   assert.equal(c.pickPlayer({ ua: 'Windows', hls: false, native: false, force: 'hls' }), 'none');
 });

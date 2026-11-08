@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a101c">
-  <meta name="description" content="ดูกล้องจราจรฉะเชิงเทรา 40 จุด ค้นหาทางแยก บันทึกกล้องโปรด ตรวจฝนและน้ำท่วมได้ทั้งมือถือและคอมพิวเตอร์">
+  <meta name="description" content="ดูกล้องจราจรฉะเชิงเทรา 40 จุด ค้นหาทางแยกและบันทึกกล้องโปรดได้ทั้งมือถือและคอมพิวเตอร์">
   <title>กล้องจราจรฉะเชิงเทรา · CCTV Live</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,17 +16,7 @@
   <script defer src="scripts/data.js"></script>
   <script defer src="scripts/core.js"></script>
   <script defer src="scripts/player.js"></script>
-  <script defer src="scripts/flood-config.js"></script>
-  <script defer src="scripts/flood-core.js"></script>
-  <script defer src="scripts/flood-client.js"></script>
-  <script defer src="scripts/rain-config.js"></script>
-  <script defer src="scripts/rain-core.js"></script>
-  <script defer src="scripts/rain-client.js"></script>
   <script defer src="scripts/app.js"></script>
-  <script defer src="scripts/flood-ui.js"></script>
-  <script defer src="scripts/rain-ui.js"></script>
-  <script defer src="scripts/analyst.js"></script>
-  <script defer src="scripts/roi-editor.js"></script>
   <script defer src="scripts/navigation.js"></script>
   <script defer src="scripts/interface.js"></script>
   <script defer src="scripts/motion.js"></script>
@@ -64,10 +54,10 @@
   <p class="sidebar-label">WORKSPACE</p>
   <nav class="primary-nav" aria-label="หน้าหลัก">
     <button id="nav-live" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-grid"/></svg><span class="nav-copy">ภาพสด<small>Live cameras</small></span><span class="nav-indicator" aria-hidden="true"></span></button>
-    <button id="nav-analysis" aria-current="false"><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg><span class="nav-copy">Analysis<small>น้ำท่วมและฝน</small></span></button>
+    <button id="nav-analysis" aria-current="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg><span class="nav-copy">Analysis<small>น้ำท่วมและฝน</small></span></button>
   </nav>
 <section class="toolbar" aria-label="ค้นหาและเลือกกล้อง">
-  <p class="sidebar-label">CAMERA EXPLORER</p>
+  <p class="sidebar-label">CAMERA LIST</p>
   <div class="filters">
     <div class="search-field"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" placeholder="ค้นหากล้องหรือถนน…" aria-label="ค้นหากล้อง ถนน หรือทางแยก" autocomplete="off" maxlength="120"><button id="clear-search" class="icon-button" aria-label="ล้างคำค้นหา" hidden><svg class="ico"><use href="#i-close"/></svg></button></div>
     <label class="filter-label" for="group">พื้นที่เฝ้าดู</label>
@@ -81,19 +71,14 @@
     <div class="group-field"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg><select id="analysis-group"><option value="">ทุกทางแยก</option></select></div>
     <p class="sidebar-hint">เลือกกล้องและช่วงเวลาในหน้าวิเคราะห์ เพื่อดูสถานะและเหตุการณ์ย้อนหลัง</p>
   </section>
-  <div class="sidebar-bottom">
-    <div class="city-visual" aria-hidden="true"><svg viewBox="0 0 200 64" fill="none"><path d="M0 60H200M12 60V40H32V60M43 60V25H65V60M77 60V12H103V60M116 60V32H142V60M153 60V21H176V60M84 12V5M95 12V5M0 49H200"/><path class="city-windows" d="M50 33H58M50 42H58M84 23H96M84 33H96M84 43H96M123 41H135M160 30H168M160 40H168"/></svg></div>
-    <p class="city-name">ฉะเชิงเทรา</p><p class="sidebar-hint">มองเมืองผ่านทุกมุมถนน</p>
-    <div class="network-footprint"><span><strong>40</strong> กล้อง</span><span><strong>10</strong> ทางแยก</span></div>
-    <p class="sidebar-note"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg> Chachoengsao, Thailand</p>
-  </div>
+
 </aside>
 <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
 <div class="app-main">
 <header class="site-header">
   <div class="header-title">
     <button id="menu-toggle" class="icon-button" aria-label="เปิดเมนูและตัวกรอง" aria-controls="sidebar" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
-    <div><p class="header-kicker">CITY OBSERVATORY <span aria-hidden="true">/</span> <span id="header-view">LIVE VIEW</span></p><p id="header-title">ศูนย์เฝ้าดูจราจร</p></div>
+    <div><p class="header-kicker">SMART CCTV <span aria-hidden="true">/</span> <span id="header-view">LIVE VIEW</span></p><p id="header-title">ศูนย์เฝ้าดูจราจร</p></div>
   </div>
   <div class="header-context">
     <div class="clock"><time id="clock">--:--:--</time><span>เวลาประเทศไทย · UTC+7</span></div>
@@ -101,7 +86,7 @@
   </div>
 </header>
 <main id="workspace" tabindex="-1">
-  <div class="workspace-intro"><div><p class="section-kicker"><span aria-hidden="true"></span> TRAFFIC / LIVE</p><h2>ทุกมุมเมือง ในมุมมองเดียว<span class="intro-dot">.</span></h2></div><p>ภาพจราจรจากฉะเชิงเทรา<br><span>เลือกจุดที่คุณอยากเฝ้าดู</span></p></div>
+
   <div class="workspace-bar">
     <div class="workspace-heading"><h2 id="view-title">ทุกทางแยก</h2><span id="result-count"></span></div>
     <div class="workspace-tools">
